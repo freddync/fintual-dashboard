@@ -1,0 +1,64 @@
+name: Actualizar precios
+
+# Cada hora, de lunes a viernes, entre las 9:00 y las 20:00 de Nueva York.
+#
+# El cron de GitHub solo entiende UTC y no ajusta el horario de verano, así que
+# se dispara cada hora en todo el rango UTC posible y el primer paso decide según
+# la hora LOCAL de Nueva York. El filtro es por ventana (no por hora exacta)
+# porque GitHub a veces atrasa los cron.
+on:
+  schedule:
+    - cron: "0 13-23,0-1 * * *"
+  workflow_dispatch:          # permite lanzarlo a mano desde la pestaña Actions
+
+permissions:
+  contents: write
+
+concurrency:
+  group: datos
+  cancel-in-progress: false
+
+jobs:
+  precios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Verificar horario de mercado
+        id: guard
+        run: |
+          HORA=$(TZ=America/New_York date +%-H)
+          DIA=$(TZ=America/New_York date +%u)
+          echo "Hora en Nueva York: $(TZ=America/New_York date '+%Y-%m-%d %H:%M %Z (%a)')"
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "correr=si" >> "$GITHUB_OUTPUT"
+          elif [ "$DIA" -le 5 ] && [ "$HORA" -ge 9 ] && [ "$HORA" -le 20 ]; then
+            echo "correr=si" >> "$GITHUB_OUTPUT"
+          else
+            echo "Fuera de horario: se omite."
+            echo "correr=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.correr == 'si'
+
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.correr == 'si'
+        with:
+          python-version: "3.12"
+
+      - name: Descargar precios
+        if: steps.guard.outputs.correr == 'si'
+        run: |
+          pip install requests pandas
+          python actualizar.py precios
+
+      - name: Publicar
+        if: steps.guard.outputs.correr == 'si'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/precios data/_ultima_actualizacion.json
+          if git diff --cached --quiet; then echo "Sin cambios."; exit 0; fi
+          git commit -m "Precios $(TZ=America/New_York date '+%Y-%m-%d %H:%M NY')"
+          for i in 1 2 3; do git pull --rebase origin main && git push && exit 0; sleep 15; done
+          exit 1
