@@ -104,6 +104,11 @@ def config_gist():
         return None, None
 
 
+def archivo_gist(files):
+    """El archivo seguimiento.json del Gist, o el primero que tenga si se llama distinto."""
+    return files.get(GIST_FILE) or next(iter(files.values()))
+
+
 @st.cache_data(ttl=60, show_spinner=False)
 def leer_seguimiento():
     """{ticker: {"fecha": "YYYY-MM-DD", "precio": float}}"""
@@ -112,7 +117,7 @@ def leer_seguimiento():
         if gist_id:
             r = requests.get(f"https://api.github.com/gists/{gist_id}", headers=headers, timeout=15)
             r.raise_for_status()
-            return json.loads(r.json()["files"][GIST_FILE]["content"] or "{}")
+            return json.loads(archivo_gist(r.json()["files"])["content"].strip() or "{}")
         with open(SEGUIMIENTO, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
@@ -126,8 +131,10 @@ def guardar_seguimiento(seg):
     texto = json.dumps(seg, ensure_ascii=False, indent=1)
     gist_id, headers = config_gist()
     if gist_id:
-        r = requests.patch(f"https://api.github.com/gists/{gist_id}", headers=headers, timeout=15,
-                           json={"files": {GIST_FILE: {"content": texto}}})
+        url = f"https://api.github.com/gists/{gist_id}"
+        nombre = archivo_gist(requests.get(url, headers=headers, timeout=15).json()["files"])["filename"]
+        r = requests.patch(url, headers=headers, timeout=15,
+                           json={"files": {nombre: {"content": texto}}})
         r.raise_for_status()
     else:
         with open(SEGUIMIENTO, "w", encoding="utf-8") as f:
