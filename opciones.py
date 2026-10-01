@@ -7,6 +7,7 @@ Yahoo (yfinance resuelve la cookie/crumb que exigen las opciones).
 """
 
 import datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import requests
@@ -35,7 +36,7 @@ def muros(ticker, precio):
     import yfinance as yf
 
     t = yf.Ticker(ticker)
-    hoy = datetime.date.today()
+    hoy = datetime.datetime.now(ZoneInfo("America/New_York")).date()   # el servidor corre en UTC
     out = []
     for exp in t.options or []:
         dte = (datetime.date.fromisoformat(exp) - hoy).days

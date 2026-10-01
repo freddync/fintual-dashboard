@@ -7,6 +7,7 @@ Corre local con:  streamlit run app.py   (o doble click en Dashboard.bat)
 import datetime
 import json
 import os
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
