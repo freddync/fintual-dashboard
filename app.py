@@ -147,7 +147,8 @@ def guardar_seguimiento(seg):
 
 def agregar_seguimiento(ticker, precio):
     seg = dict(leer_seguimiento())
-    seg[ticker] ={"fecha": datetime.date.today().isoformat(), "precio": round(float(precio), 2)}
+    hoy = datetime.datetime.now(ZoneInfo("America/New_York")).date()   # el servidor corre en UTC
+    seg[ticker] = {"fecha": hoy.isoformat(), "precio": round(float(precio), 2)}
     guardar_seguimiento(seg)
 
 
