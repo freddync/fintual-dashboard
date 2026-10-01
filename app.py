@@ -16,7 +16,13 @@ import requests
 import streamlit as st
 from plotly.subplots import make_subplots
 
+import importlib
+
 import opciones
+
+# Streamlit Cloud, al recibir un push, vuelve a ejecutar app.py pero puede seguir
+# usando la versión anterior de opciones.py que tenía en memoria
+importlib.reload(opciones)
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 PRECIOS_DIR = os.path.join(DATA_DIR, "precios")
