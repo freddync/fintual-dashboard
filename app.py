@@ -381,8 +381,12 @@ if vista == "General":
             t.insert(5, "Precio al agregar", t["Ticker"].map(lambda x: seg[x]["precio"]))
             t.insert(7, "Desde que se agregó %", (t["Precio"] / t["Precio al agregar"] - 1) * 100)
             mostrar_tabla(t, "tabla_seg", height=min(650, 38 + 35 * len(t)))
-        st.caption("El seguimiento se guarda en data/seguimiento.json: se mantiene al cerrar y volver a "
-                   "abrir el dashboard, y no depende de los filtros del panel izquierdo.")
+        if config_gist()[0]:
+            st.caption("✅ Guardado en GitHub Gist: se mantiene entre sesiones y dispositivos. "
+                       "No depende de los filtros del panel izquierdo.")
+        else:
+            st.caption("⚠️ Guardado en data/seguimiento.json (archivo local). En Streamlit Cloud se pierde "
+                       "al redeployar: configura los secrets [seguimiento] gist_id y token.")
 
 
 # ---------------------------------------------------------------------------
