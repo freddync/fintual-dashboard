@@ -16,6 +16,7 @@ import requests
 import streamlit as st
 from plotly.subplots import make_subplots
 
+import hashlib
 import importlib
 
 import opciones
@@ -23,6 +24,8 @@ import opciones
 # Streamlit Cloud, al recibir un push, vuelve a ejecutar app.py pero puede seguir
 # usando la versión anterior de opciones.py que tenía en memoria
 importlib.reload(opciones)
+# cambia cuando cambia opciones.py: invalida lo cacheado con la versión anterior
+VERSION_OPCIONES = hashlib.md5(open(opciones.__file__, "rb").read()).hexdigest()
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 PRECIOS_DIR = os.path.join(DATA_DIR, "precios")
@@ -314,7 +317,7 @@ def tabla_fundamental(df, anual):
 
 
 @st.cache_data(ttl=900, show_spinner="Descargando opciones...")
-def cargar_muros(ticker, precio):
+def cargar_muros(ticker, precio, version=""):
     """(muros, error). Cacheado 15 min: las opciones cambian durante el día."""
     try:
         return opciones.muros(ticker, precio), None
@@ -323,7 +326,7 @@ def cargar_muros(ticker, precio):
 
 
 @st.cache_data(ttl=900, show_spinner="Descargando velas de 1 hora...")
-def cargar_velas_1h(ticker):
+def cargar_velas_1h(ticker, version=""):
     try:
         return opciones.velas_1h(ticker), None
     except Exception as e:
@@ -657,8 +660,8 @@ else:
 
     # ---- call/put walls sobre las velas de 1h de la última semana ----
     st.subheader("Call / put walls")
-    paredes, err_op = cargar_muros(ticker, float(fila["Precio"]))
-    velas, err_v = cargar_velas_1h(ticker)
+    paredes, err_op = cargar_muros(ticker, float(fila["Precio"]), VERSION_OPCIONES)
+    velas, err_v = cargar_velas_1h(ticker, VERSION_OPCIONES)
     if err_op or not paredes:
         st.info(f"Sin cadena de opciones para {ticker}" + (f": {err_op}" if err_op else "."))
     if err_v or velas is None or velas.empty:
