@@ -4,3 +4,4 @@ numpy>=1.24
 plotly>=5.20
 requests>=2.28
 tzdata
+yfinance>=0.2.40

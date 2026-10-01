@@ -15,6 +15,8 @@ import requests
 import streamlit as st
 from plotly.subplots import make_subplots
 
+import opciones
+
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 PRECIOS_DIR = os.path.join(DATA_DIR, "precios")
 FUND_DIR = os.path.join(DATA_DIR, "fundamentales")
@@ -275,6 +277,58 @@ def tabla_fundamental(df, anual):
     return tabla.style.map(colorear, subset=var_cols)
 
 
+@st.cache_data(ttl=900, show_spinner="Descargando opciones...")
+def cargar_muros(ticker, precio):
+    """(muros, error). Cacheado 15 min: las opciones cambian durante el día."""
+    try:
+        return opciones.muros(ticker, precio), None
+    except Exception as e:
+        return None, f"{type(e).__name__}: {e}"
+
+
+@st.cache_data(ttl=900, show_spinner="Descargando velas de 1 hora...")
+def cargar_velas_1h(ticker):
+    try:
+        return opciones.velas_1h(ticker), None
+    except Exception as e:
+        return None, f"{type(e).__name__}: {e}"
+
+
+COLOR_MURO = {"C": ["#3ecf8e", "#8fe0b9"], "P": ["#ef5a6f", "#f0a8b0"]}
+
+
+def grafico_muros(velas, venc):
+    """Velas de 1h de la semana con los walls extendidos hasta el vencimiento."""
+    ahora = velas.index[-1]
+    # cierre del día de vencimiento (15:59, para no caer en el corte de la noche)
+    fin_exp = pd.Timestamp(venc["exp"]) + pd.Timedelta(hours=15, minutes=59) if venc else None
+    x_fin = max(fin_exp, ahora + pd.Timedelta(hours=1)) if venc else ahora + pd.Timedelta(hours=1)
+
+    fig = go.Figure(go.Candlestick(
+        x=velas.index, open=velas["Open"], high=velas["High"], low=velas["Low"], close=velas["Close"],
+        increasing_line_color="#3ecf8e", decreasing_line_color="#ef5a6f", name="Velas 1h"))
+    if venc:
+        for lado, nombre in [("C", "calls"), ("P", "puts")]:
+            for i, (k, oi) in enumerate(venc[nombre]):
+                color = COLOR_MURO[lado][i]
+                fig.add_trace(go.Scatter(x=[velas.index[0], x_fin], y=[k, k], mode="lines",
+                                         line=dict(color=color, width=1.5, dash="dot"),
+                                         hovertemplate=f"{lado}W{i + 1} {k:,.2f} · OI {oi:,}<extra></extra>"))
+                fig.add_annotation(x=x_fin, y=k, text=f"{lado}W{i + 1} {k:,.2f} · OI {oi:,}",
+                                   showarrow=False, xanchor="right", yanchor="bottom",
+                                   font=dict(size=10, color=color))
+        fig.add_vline(x=fin_exp, line=dict(color="#e6b45e", width=1, dash="dash"))
+        fig.add_annotation(x=fin_exp, y=0, yref="paper", text=f"Vence {venc['exp']}", showarrow=False,
+                           xanchor="right", yanchor="bottom", font=dict(size=10, color="#e6b45e"))
+        fig.add_vrect(x0=ahora, x1=x_fin, fillcolor="#e6b45e", opacity=0.04, line_width=0)
+    fig.add_vline(x=ahora, line=dict(color="#8b93a3", width=1, dash="dash"))
+    fig.update_xaxes(range=[velas.index[0] - pd.Timedelta(minutes=30), x_fin],
+                     rangeslider_visible=False,
+                     rangebreaks=[dict(bounds=["sat", "mon"]), dict(bounds=[16, 9.5], pattern="hour")])
+    fig.update_layout(height=480, template="plotly_dark", showlegend=False, margin=dict(t=10, b=10))
+    return fig
+
+
 PCT = st.column_config.NumberColumn(format="%+.1f%%")
 COLUMNAS = {
     "Precio": st.column_config.NumberColumn(format="%.2f"),
@@ -473,6 +527,35 @@ else:
     fig.update_layout(height=800, template="plotly_dark", showlegend=False,
                       margin=dict(t=10, b=10), bargap=0.1)
     st.plotly_chart(fig, width="stretch")
+
+    # ---- call/put walls sobre las velas de 1h de la última semana ----
+    st.subheader("Call / put walls")
+    paredes, err_op = cargar_muros(ticker, float(fila["Precio"]))
+    velas, err_v = cargar_velas_1h(ticker)
+    if err_op or not paredes:
+        st.info(f"Sin cadena de opciones para {ticker}" + (f": {err_op}" if err_op else "."))
+    if err_v or velas is None or velas.empty:
+        st.info(f"No se pudieron cargar las velas de 1 hora: {err_v or 'sin datos'}")
+    else:
+        venc = None
+        if paredes:
+            etiquetas = [f"{p['exp']} ({p['dte']} DTE)" for p in paredes]
+            venc = paredes[etiquetas.index(st.radio("Vencimiento", etiquetas, horizontal=True))]
+        st.plotly_chart(grafico_muros(velas, venc), width="stretch")
+        if venc:
+            precio_act = float(velas["Close"].iloc[-1])
+            filas = [{"Muro": f"{lado}{i + 1}", "Strike": k, "Open Interest": oi,
+                      "Distancia %": (k / precio_act - 1) * 100}
+                     for lado, lista in [("Call wall ", venc["calls"]), ("Put wall ", venc["puts"])]
+                     for i, (k, oi) in enumerate(lista)]
+            st.dataframe(pd.DataFrame(filas), hide_index=True, width="content", column_config={
+                "Strike": st.column_config.NumberColumn(format="%.2f"),
+                "Open Interest": st.column_config.NumberColumn(format="%d"),
+                "Distancia %": PCT})
+            st.caption("Walls = los 2 strikes con mayor Open Interest por lado, a ±25% del precio. "
+                       "Las líneas llegan hasta el cierre del día de vencimiento (límite DTE); el espacio a "
+                       "la derecha son las horas de mercado que quedan. Datos en vivo de Yahoo, "
+                       "cacheados 15 minutos.")
 
     # ---- fundamentales ----
     st.subheader("Fundamentales")
