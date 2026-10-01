@@ -73,6 +73,11 @@ def bajar_precios(ticker):
     try:
         res = d["chart"]["result"][0]
         q = res["indicators"]["quote"][0]
+        # Yahoo a veces deja vacío el cierre de la sesión del día (durante la
+        # sesión o un rato después): se completa con el último precio conocido
+        precio = res.get("meta", {}).get("regularMarketPrice")
+        if q["close"] and q["close"][-1] is None and precio:
+            q["close"][-1] = precio
         df = pd.DataFrame({
             "Date": pd.to_datetime(res["timestamp"], unit="s").strftime("%Y-%m-%d"),
             "Open": q["open"], "High": q["high"], "Low": q["low"],
