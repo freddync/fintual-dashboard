@@ -9,6 +9,7 @@ Yahoo (yfinance resuelve la cookie/crumb que exigen las opciones).
 import datetime
 from zoneinfo import ZoneInfo
 
+import numpy as np
 import pandas as pd
 import requests
 
@@ -61,6 +62,58 @@ def velas_1h(ticker):
     idx = (pd.to_datetime(res["timestamp"], unit="s", utc=True)
            .tz_convert("America/New_York").tz_localize(None))
     df = pd.DataFrame({"Open": q["open"], "High": q["high"], "Low": q["low"],
-                       "Close": q["close"]}, index=idx).dropna()
+                       "Close": q["close"], "Volume": q["volume"]}, index=idx).dropna(subset=["Close"])
+    df["Volume"] = df["Volume"].fillna(0)
     # Yahoo agrega un "tick" de cierre a las 16:00 que no es una vela
     return df[~((df.index.hour == 16) & (df.index.minute == 0))]
+
+
+# ---------------------------------------------------------------------------
+# Perfil de volumen y comportamiento del precio en cada muro (última semana)
+# ---------------------------------------------------------------------------
+
+ZONA = 0.015   # zona de contacto de un muro: ±1,5% del strike
+
+
+def perfil_volumen(velas, lo, hi, n=60):
+    """Acciones transadas por nivel de precio: el volumen de cada vela se reparte
+    en partes iguales entre su mínimo y su máximo. Devuelve (centros, volumen, alto)."""
+    bordes = np.linspace(lo, hi, n + 1)
+    vol = np.zeros(n)
+    for l, h, v in zip(velas["Low"], velas["High"], velas["Volume"]):
+        if not v:
+            continue
+        if h <= l:
+            vol[np.clip(np.searchsorted(bordes, l) - 1, 0, n - 1)] += v
+            continue
+        cruce = np.clip(np.minimum(bordes[1:], h) - np.maximum(bordes[:-1], l), 0, None)
+        vol += v * cruce / (h - l)
+    return (bordes[:-1] + bordes[1:]) / 2, vol, bordes[1] - bordes[0]
+
+
+def volumen_en_zona(velas, strike):
+    """% del volumen de la semana transado dentro de la zona del muro."""
+    _, vol, _ = perfil_volumen(velas, strike * (1 - ZONA), strike * (1 + ZONA), n=1)
+    total = velas["Volume"].sum()
+    return vol[0] / total * 100 if total else None
+
+
+def estado_muro(velas, strike):
+    """¿Qué hizo el precio con el muro durante la semana?
+
+    Rompió ↑ / ↓  empezó la semana de un lado del strike y ahora cierra del otro
+    Probando      está dentro de la zona del muro (±1,5%)
+    Rebotó        llegó a la zona (o la perforó con mecha) y se alejó sin cruzar
+    Sin tocar     nunca llegó a la zona
+    """
+    primero, ultimo = velas["Close"].iloc[0], velas["Close"].iloc[-1]
+    if (primero >= strike) != (ultimo >= strike):
+        return "Rompió ↑" if ultimo >= strike else "Rompió ↓"
+    if abs(ultimo / strike - 1) <= ZONA:
+        return "Probando"
+    # punto más cercano al que llegó, desde su lado del muro
+    if ultimo > strike:
+        toco = velas["Low"].min() <= strike * (1 + ZONA)
+    else:
+        toco = velas["High"].max() >= strike * (1 - ZONA)
+    return "Rebotó" if toco else "Sin tocar"

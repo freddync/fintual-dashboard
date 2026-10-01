@@ -21,7 +21,6 @@ import opciones
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 PRECIOS_DIR = os.path.join(DATA_DIR, "precios")
 FUND_DIR = os.path.join(DATA_DIR, "fundamentales")
-SEGUIMIENTO = os.path.join(DATA_DIR, "seguimiento.json")
 
 RSI_PERIOD, RSI_ALTO, RSI_BAJO = 5, 70, 30
 MACD_FAST, MACD_SLOW, MACD_SIGNAL = 6, 13, 5
@@ -93,9 +92,10 @@ def senal_macd(hist):
 # ---------------------------------------------------------------------------
 # En Streamlit Cloud el disco se borra en cada redeploy, así que la lista se
 # guarda en un GitHub Gist privado (configurado en los secrets de la app).
-# Sin secrets (uso local) se guarda en data/seguimiento.json.
+# Sin secrets (uso local) se guarda en data/seguimiento.json y data/lineas.json.
 
 GIST_FILE = "seguimiento.json"
+LINEAS = "lineas.json"   # líneas de tendencia guardadas, en el mismo Gist
 
 
 def config_gist():
@@ -107,42 +107,70 @@ def config_gist():
         return None, None
 
 
-def archivo_gist(files):
-    """El archivo seguimiento.json del Gist, o el primero que tenga si se llama distinto."""
-    return files.get(GIST_FILE) or next(iter(files.values()))
+def archivo_gist(files, nombre):
+    """El archivo pedido dentro del Gist. Para el seguimiento se acepta cualquier
+    otro nombre (el Gist se creó con "gistfile1.txt"). None si no existe."""
+    if nombre in files:
+        return files[nombre]
+    if nombre == GIST_FILE:
+        return next((f for n, f in files.items() if n != LINEAS), None)
+    return None
 
 
 @st.cache_data(ttl=60, show_spinner=False)
-def leer_seguimiento():
-    """{ticker: {"fecha": "YYYY-MM-DD", "precio": float}}"""
+def leer_json(nombre):
     gist_id, headers = config_gist()
     try:
         if gist_id:
             r = requests.get(f"https://api.github.com/gists/{gist_id}", headers=headers, timeout=15)
             r.raise_for_status()
-            return json.loads(archivo_gist(r.json()["files"])["content"].strip() or "{}")
-        with open(SEGUIMIENTO, encoding="utf-8") as f:
+            f = archivo_gist(r.json()["files"], nombre)
+            return json.loads(f["content"].strip() or "{}") if f else {}
+        with open(os.path.join(DATA_DIR, nombre), encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
     except Exception as e:
-        st.error(f"No se pudo leer el seguimiento: {e}")
+        st.error(f"No se pudo leer {nombre}: {e}")
         return {}
 
 
-def guardar_seguimiento(seg):
-    texto = json.dumps(seg, ensure_ascii=False, indent=1)
+def guardar_json(nombre, datos):
+    texto = json.dumps(datos, ensure_ascii=False, indent=1)
     gist_id, headers = config_gist()
     if gist_id:
         url = f"https://api.github.com/gists/{gist_id}"
-        nombre = archivo_gist(requests.get(url, headers=headers, timeout=15).json()["files"])["filename"]
+        f = archivo_gist(requests.get(url, headers=headers, timeout=15).json()["files"], nombre)
         r = requests.patch(url, headers=headers, timeout=15,
-                           json={"files": {nombre: {"content": texto}}})
+                           json={"files": {f["filename"] if f else nombre: {"content": texto}}})
         r.raise_for_status()
     else:
-        with open(SEGUIMIENTO, "w", encoding="utf-8") as f:
+        with open(os.path.join(DATA_DIR, nombre), "w", encoding="utf-8") as f:
             f.write(texto)
-    leer_seguimiento.clear()
+    leer_json.clear()
+
+
+def leer_seguimiento():
+    """{ticker: {"fecha": "YYYY-MM-DD", "precio": float}}"""
+    return leer_json(GIST_FILE)
+
+
+def guardar_seguimiento(seg):
+    guardar_json(GIST_FILE, seg)
+
+
+def leer_lineas(ticker):
+    """[{"x0": "YYYY-MM-DD", "y0": float, "x1": ..., "y1": ...}, ...]"""
+    return leer_json(LINEAS).get(ticker, [])
+
+
+def guardar_lineas(ticker, lineas):
+    todas = dict(leer_json(LINEAS))
+    if lineas:
+        todas[ticker] = lineas
+    else:
+        todas.pop(ticker, None)
+    guardar_json(LINEAS, todas)
 
 
 def agregar_seguimiento(ticker, precio):
@@ -299,35 +327,82 @@ def cargar_velas_1h(ticker):
 COLOR_MURO = {"C": ["#3ecf8e", "#8fe0b9"], "P": ["#ef5a6f", "#f0a8b0"]}
 
 
-def grafico_muros(velas, venc):
-    """Velas de 1h de la semana con los walls extendidos hasta el vencimiento."""
+COLOR_ESTADO = {"Rompió ↑": "#e6b45e", "Rompió ↓": "#e6b45e", "Probando": "#5ea8e6",
+                "Rebotó": "#3ecf8e", "Sin tocar": "#8b93a3"}
+
+# botones para dibujar en los gráficos (barra de arriba a la derecha)
+DIBUJO = {"displaylogo": False,
+          "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "eraseshape"]}
+
+
+def lista_muros(venc):
+    """[(etiqueta, strike, oi, color)] de un vencimiento."""
+    return [(f"{lado}W{i + 1}", k, oi, COLOR_MURO[lado][i])
+            for lado, nombre in [("C", "calls"), ("P", "puts")]
+            for i, (k, oi) in enumerate(venc[nombre])] if venc else []
+
+
+def grafico_muros(velas, venc, estados):
+    """Velas de 1h de la semana con los walls extendidos hasta el vencimiento y,
+    a la derecha, el perfil de volumen de la semana (mismo eje de precios)."""
     ahora = velas.index[-1]
     # cierre del día de vencimiento (15:59, para no caer en el corte de la noche)
     fin_exp = pd.Timestamp(venc["exp"]) + pd.Timedelta(hours=15, minutes=59) if venc else None
     x_fin = max(fin_exp, ahora + pd.Timedelta(hours=1)) if venc else ahora + pd.Timedelta(hours=1)
+    muros_ = lista_muros(venc)
 
-    fig = go.Figure(go.Candlestick(
+    fig = make_subplots(rows=1, cols=2, shared_yaxes=True, column_widths=[0.82, 0.18],
+                        horizontal_spacing=0.01)
+    fig.add_trace(go.Candlestick(
         x=velas.index, open=velas["Open"], high=velas["High"], low=velas["Low"], close=velas["Close"],
-        increasing_line_color="#3ecf8e", decreasing_line_color="#ef5a6f", name="Velas 1h"))
+        increasing_line_color="#3ecf8e", decreasing_line_color="#ef5a6f", name="Velas 1h"), row=1, col=1)
+
+    # rango de precios: velas + muros, con un pequeño margen
+    ys = [velas["Low"].min(), velas["High"].max()] + [k for _, k, _, _ in muros_]
+    pad = (max(ys) - min(ys)) * 0.05
+    y_lo, y_hi = min(ys) - pad, max(ys) + pad
+
+    # perfil de volumen: gris, y del color del muro dentro de su zona (±1,5%)
+    precios, vol, alto = opciones.perfil_volumen(velas, y_lo, y_hi, n=70)
+    colores = []
+    for p in precios:
+        c = "rgba(139,147,163,0.5)"
+        for _, k, _, color in muros_:
+            if abs(p / k - 1) <= opciones.ZONA:
+                c = color
+        colores.append(c)
+    fig.add_trace(go.Bar(x=vol, y=precios, orientation="h", marker_color=colores, width=alto * 0.9,
+                         hovertemplate="%{y:,.2f}: %{x:,.0f} acciones<extra>Perfil de volumen</extra>"),
+                  row=1, col=2)
+    if vol.sum():
+        poc = precios[vol.argmax()]
+        fig.add_annotation(x=1, xref="x2 domain", y=poc, yref="y2", text=f"POC {poc:,.2f}",
+                           showarrow=False, xanchor="right", yanchor="bottom", font=dict(size=9))
+
+    for tag, k, oi, color in muros_:
+        est = estados.get(tag, "")
+        fig.add_hrect(y0=k * (1 - opciones.ZONA), y1=k * (1 + opciones.ZONA), fillcolor=color,
+                      opacity=0.07, line_width=0, row=1, col=1)
+        fig.add_trace(go.Scatter(x=[velas.index[0], x_fin], y=[k, k], mode="lines",
+                                 line=dict(color=color, width=1.5, dash="dot"),
+                                 hovertemplate=f"{tag} {k:,.2f} · OI {oi:,} · {est}<extra></extra>"),
+                      row=1, col=1)
+        fig.add_hline(y=k, line=dict(color=color, width=1, dash="dot"), row=1, col=2)
+        fig.add_annotation(x=x_fin, y=k, text=f"{tag} {k:,.2f} · {est}", showarrow=False,
+                           xanchor="right", yanchor="bottom", font=dict(size=10, color=color))
     if venc:
-        for lado, nombre in [("C", "calls"), ("P", "puts")]:
-            for i, (k, oi) in enumerate(venc[nombre]):
-                color = COLOR_MURO[lado][i]
-                fig.add_trace(go.Scatter(x=[velas.index[0], x_fin], y=[k, k], mode="lines",
-                                         line=dict(color=color, width=1.5, dash="dot"),
-                                         hovertemplate=f"{lado}W{i + 1} {k:,.2f} · OI {oi:,}<extra></extra>"))
-                fig.add_annotation(x=x_fin, y=k, text=f"{lado}W{i + 1} {k:,.2f} · OI {oi:,}",
-                                   showarrow=False, xanchor="right", yanchor="bottom",
-                                   font=dict(size=10, color=color))
-        fig.add_vline(x=fin_exp, line=dict(color="#e6b45e", width=1, dash="dash"))
-        fig.add_annotation(x=fin_exp, y=0, yref="paper", text=f"Vence {venc['exp']}", showarrow=False,
+        fig.add_vline(x=fin_exp, line=dict(color="#e6b45e", width=1, dash="dash"), row=1, col=1)
+        fig.add_annotation(x=fin_exp, y=0, yref="y domain", text=f"Vence {venc['exp']}", showarrow=False,
                            xanchor="right", yanchor="bottom", font=dict(size=10, color="#e6b45e"))
-        fig.add_vrect(x0=ahora, x1=x_fin, fillcolor="#e6b45e", opacity=0.04, line_width=0)
-    fig.add_vline(x=ahora, line=dict(color="#8b93a3", width=1, dash="dash"))
+        fig.add_vrect(x0=ahora, x1=x_fin, fillcolor="#e6b45e", opacity=0.04, line_width=0, row=1, col=1)
+    fig.add_vline(x=ahora, line=dict(color="#8b93a3", width=1, dash="dash"), row=1, col=1)
+    fig.update_yaxes(range=[y_lo, y_hi])
     fig.update_xaxes(range=[velas.index[0] - pd.Timedelta(minutes=30), x_fin],
-                     rangeslider_visible=False,
+                     rangeslider_visible=False, row=1, col=1,
                      rangebreaks=[dict(bounds=["sat", "mon"]), dict(bounds=[16, 9.5], pattern="hour")])
-    fig.update_layout(height=480, template="plotly_dark", showlegend=False, margin=dict(t=10, b=10))
+    fig.update_xaxes(showticklabels=False, showgrid=False, row=1, col=2)
+    fig.update_layout(height=520, template="plotly_dark", showlegend=False, margin=dict(t=10, b=10),
+                      bargap=0, newshape=dict(line=dict(color="#e6b45e", width=2)))
     return fig
 
 
@@ -381,6 +456,8 @@ data = resumen(json.dumps(sello))
 if "_abrir" in st.session_state:
     st.session_state["vista"] = "Empresa"
     st.session_state["ticker"] = st.session_state.pop("_abrir")
+if st.session_state.pop("_volver", False):
+    st.session_state["vista"] = "General"
 
 st.sidebar.title("📈 Fintual")
 vista = st.sidebar.radio("Vista", ["General", "Empresa"], horizontal=True, key="vista")
@@ -467,6 +544,10 @@ else:
     fila = data[data["Ticker"] == ticker].iloc[0]
     ci = info.get(ticker, {})
 
+    if st.button("← Volver a la lista"):
+        st.session_state["_volver"] = True
+        st.rerun()
+
     seg = leer_seguimiento()
     h1, h2 = st.columns([5, 1], vertical_alignment="center")
     h1.title(f"{fila['Nombre']} ({ticker})")
@@ -525,10 +606,48 @@ else:
     fig.update_yaxes(title_text="Vol.", row=2, col=1)
     fig.update_yaxes(range=[0, 100], title_text=COL_RSI, row=3, col=1)
     fig.update_yaxes(title_text=f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}", row=4, col=1)
+    # líneas de tendencia guardadas: se prolongan hasta el último día del gráfico
+    lineas = leer_lineas(ticker)
+    fin = d["Date"].iloc[-1]
+    for ln in lineas:
+        x0, x1 = pd.Timestamp(ln["x0"]), pd.Timestamp(ln["x1"])
+        pend = (ln["y1"] - ln["y0"]) / max((x1 - x0).days, 1)
+        x_fin = max(x1, fin)
+        fig.add_trace(go.Scatter(x=[x0, x_fin], y=[ln["y0"], ln["y0"] + pend * (x_fin - x0).days],
+                                 mode="lines", line=dict(color="#e6b45e", width=1.6),
+                                 hoverinfo="skip"), row=1, col=1)
+    fig.update_yaxes(range=[d["Low"].min() * 0.97, d["High"].max() * 1.03], row=1, col=1)
+
     fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])], rangeslider_visible=False)
     fig.update_layout(height=800, template="plotly_dark", showlegend=False,
-                      margin=dict(t=10, b=10), bargap=0.1)
-    st.plotly_chart(fig, width="stretch")
+                      margin=dict(t=10, b=10), bargap=0.1,
+                      newshape=dict(line=dict(color="#e6b45e", width=2)))
+    st.plotly_chart(fig, width="stretch", config=DIBUJO)
+
+    with st.expander(f"✏️ Líneas de tendencia guardadas ({len(lineas)})"):
+        st.caption("Los botones de dibujo del gráfico (arriba a la derecha) sirven para trazar rápido, "
+                   "pero esas líneas se pierden al recargar. Las que agregues aquí quedan guardadas y "
+                   "se prolongan hasta hoy.")
+        with st.form("nueva_linea", clear_on_submit=True):
+            inicio = d.iloc[max(len(d) - 63, 0)]
+            f1, f2, f3, f4 = st.columns(4)
+            x0 = f1.date_input("Desde", inicio["Date"].date())
+            y0 = f2.number_input("Precio desde", value=round(float(inicio["Close"]), 2), format="%.2f")
+            x1 = f3.date_input("Hasta", fin.date())
+            y1 = f4.number_input("Precio hasta", value=round(float(d["Close"].iloc[-1]), 2), format="%.2f")
+            if st.form_submit_button("Guardar línea"):
+                if x1 <= x0:
+                    st.error("La fecha 'Hasta' debe ser posterior a 'Desde'.")
+                else:
+                    guardar_lineas(ticker, lineas + [{"x0": x0.isoformat(), "y0": y0,
+                                                      "x1": x1.isoformat(), "y1": y1}])
+                    st.rerun()
+        for i, ln in enumerate(lineas):
+            l1, l2 = st.columns([5, 1], vertical_alignment="center")
+            l1.write(f"{ln['x0']} ({ln['y0']:,.2f}) → {ln['x1']} ({ln['y1']:,.2f})")
+            if l2.button("Borrar", key=f"borrar_linea_{i}"):
+                guardar_lineas(ticker, lineas[:i] + lineas[i + 1:])
+                st.rerun()
 
     # ---- call/put walls sobre las velas de 1h de la última semana ----
     st.subheader("Call / put walls")
@@ -543,21 +662,38 @@ else:
         if paredes:
             etiquetas = [f"{p['exp']} ({p['dte']} DTE)" for p in paredes]
             venc = paredes[etiquetas.index(st.radio("Vencimiento", etiquetas, horizontal=True))]
-        st.plotly_chart(grafico_muros(velas, venc), width="stretch")
+        estados = {tag: opciones.estado_muro(velas, k) for tag, k, _, _ in lista_muros(venc)}
+        st.plotly_chart(grafico_muros(velas, venc, estados), width="stretch", config=DIBUJO)
         if venc:
             precio_act = float(velas["Close"].iloc[-1])
-            filas = [{"Muro": f"{lado}{i + 1}", "Strike": k, "Open Interest": oi,
-                      "Distancia %": (k / precio_act - 1) * 100}
-                     for lado, lista in [("Call wall ", venc["calls"]), ("Put wall ", venc["puts"])]
-                     for i, (k, oi) in enumerate(lista)]
-            st.dataframe(pd.DataFrame(filas), hide_index=True, width="content", column_config={
-                "Strike": st.column_config.NumberColumn(format="%.2f"),
-                "Open Interest": st.column_config.NumberColumn(format="%d"),
-                "Distancia %": PCT})
-            st.caption("Walls = los 2 strikes con mayor Open Interest por lado, a ±25% del precio. "
-                       "Las líneas llegan hasta el cierre del día de vencimiento (límite DTE); el espacio a "
-                       "la derecha son las horas de mercado que quedan. Datos en vivo de Yahoo, "
-                       "cacheados 15 minutos.")
+            tabla_m = pd.DataFrame([{
+                "Muro": tag, "Strike": k, "Open Interest": oi,
+                "Esta semana": estados[tag],
+                "Distancia %": (k / precio_act - 1) * 100,
+                "Vol. semana en zona %": opciones.volumen_en_zona(velas, k),
+            } for tag, k, oi, _ in lista_muros(venc)])
+            st.dataframe(
+                tabla_m.style.map(lambda v: f"color: {COLOR_ESTADO.get(v, '')}; font-weight: 600",
+                                  subset=["Esta semana"]),
+                hide_index=True, width="content", column_config={
+                    "Strike": st.column_config.NumberColumn(format="%.2f"),
+                    "Open Interest": st.column_config.NumberColumn(format="%d"),
+                    "Distancia %": PCT,
+                    "Vol. semana en zona %": st.column_config.NumberColumn(format="%.1f%%")})
+            z = opciones.ZONA * 100
+            st.caption(
+                f"**CW** = call walls, **PW** = put walls: los 2 strikes con mayor Open Interest por lado, a "
+                f"±25% del precio. La franja de cada muro es su zona de contacto (±{z:g}% del strike). "
+                "Las líneas llegan hasta el cierre del día de vencimiento (límite DTE).")
+            st.caption(
+                "**Esta semana** (velas de 1h de los últimos 5 días hábiles): **Rompió ↑/↓** = empezó la "
+                "semana de un lado del strike y ahora está del otro · **Probando** = está dentro de la "
+                "zona · **Rebotó** = llegó a la zona y se alejó sin cruzar · **Sin tocar** = no llegó. "
+                "A la derecha, el **perfil de volumen** de la semana (acciones transadas por nivel de "
+                "precio); en color, el volumen dentro de la zona de cada muro, y **POC** = el nivel con "
+                "más volumen. Los muros son el Open Interest de hoy: Yahoo no entrega el histórico, así "
+                "que no se sabe si el muro ya estaba ahí al empezar la semana. Datos en vivo de Yahoo, "
+                "cacheados 15 minutos.")
 
     # ---- fundamentales ----
     st.subheader("Fundamentales")
