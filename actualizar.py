@@ -17,6 +17,7 @@ import json
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -31,6 +32,7 @@ SELLO = os.path.join(DATA_DIR, "_ultima_actualizacion.json")
 
 N_ROWS_KEEP = 1250   # ~5 años de sesiones diarias
 PAUSA = 0.4          # segundos entre peticiones, para no gatillar el rate-limit de Yahoo
+HILOS = 6            # descargas de precios en paralelo
 
 HEADERS = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                           "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")}
@@ -98,17 +100,23 @@ def actualizar_precios():
     lista = tickers()
     print(f"=== Precios: {len(lista)} empresas ===", flush=True)
     ok, fallidos, ultima = 0, [], None
-    for i, t in enumerate(lista, 1):
+
+    def bajar(t):
         df = bajar_precios(t)
-        if df is None:
-            fallidos.append(t)
-        else:
-            df.to_csv(os.path.join(PRECIOS_DIR, f"{t}.csv"), index=False, lineterminator="\n")
-            ok += 1
-            ultima = max(ultima or "", df["Date"].iloc[-1])
-        if i % 50 == 0 or i == len(lista):
-            print(f"  [{i}/{len(lista)}] ok={ok} fallidos={len(fallidos)}", flush=True)
         time.sleep(PAUSA)
+        return t, df
+
+    # varias descargas en paralelo: ~2 min en vez de ~10
+    with ThreadPoolExecutor(max_workers=HILOS) as ex:
+        for i, (t, df) in enumerate(ex.map(bajar, lista), 1):
+            if df is None:
+                fallidos.append(t)
+            else:
+                df.to_csv(os.path.join(PRECIOS_DIR, f"{t}.csv"), index=False, lineterminator="\n")
+                ok += 1
+                ultima = max(ultima or "", df["Date"].iloc[-1])
+            if i % 100 == 0 or i == len(lista):
+                print(f"  [{i}/{len(lista)}] ok={ok} fallidos={len(fallidos)}", flush=True)
 
     if fallidos:
         print("Fallidos (se conserva su archivo anterior):", ", ".join(fallidos))
