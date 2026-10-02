@@ -429,14 +429,19 @@ COLUMNAS = {
 }
 
 
-def mostrar_tabla(tabla, key, height=650):
-    """Tabla ordenable; al marcar la casilla de una fila se abre esa empresa."""
+PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento"]   # para el botón de volver
+
+
+def mostrar_tabla(tabla, key, pestana, height=650):
+    """Tabla ordenable; al marcar la casilla de una fila se abre esa empresa.
+    `pestana` (índice) queda anotada para que el botón de volver regrese a ella."""
     tabla = tabla.reset_index(drop=True)
     sel = st.dataframe(tabla, hide_index=True, width="stretch", height=height,
                        on_select="rerun", selection_mode="single-row", key=key,
                        column_config=COLUMNAS)
     if sel.selection.rows:
         st.session_state["_abrir"] = tabla.iloc[sel.selection.rows[0]]["Ticker"]
+        st.session_state["_pestana_origen"] = pestana
         del st.session_state[key]   # limpia la selección para la vuelta
         st.rerun()
 
@@ -467,6 +472,7 @@ if "_abrir" in st.session_state:
     st.session_state["ticker"] = st.session_state.pop("_abrir")
 if st.session_state.pop("_volver", False):
     st.session_state["vista"] = "General"
+    st.session_state["_ir_a_pestana"] = st.session_state.get("_pestana_origen", 0)
 
 st.sidebar.title("📈 Fintual")
 vista = st.sidebar.radio("Vista", ["General", "Empresa"], horizontal=True, key="vista")
@@ -495,11 +501,17 @@ if vista == "General":
                f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}: Pre-cruce = histograma negativo pero subiendo.")
 
     sobreventa = filtrado[filtrado[COL_RSI] < RSI_BAJO]
-    tab_todas, tab_rsi, tab_seg = st.tabs(
-        ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento"])
+    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento"]
+    # al volver desde una empresa se abre la pestaña de donde se vino
+    destino = st.session_state.pop("_ir_a_pestana", None)
+    if destino is not None:
+        st.session_state["pestanas"] = etiquetas[destino]
+    if st.session_state.get("pestanas") not in etiquetas:   # el conteo del título cambió
+        st.session_state.pop("pestanas", None)
+    tab_todas, tab_rsi, tab_seg = st.tabs(etiquetas, key="pestanas", on_change="rerun")
 
     with tab_todas:
-        mostrar_tabla(filtrado, "tabla_general")
+        mostrar_tabla(filtrado, "tabla_general", 0)
         st.caption("P/E con EPS diluido de los últimos 4 trimestres. EV/EBITDA con el último año fiscal. "
                    "Crecimiento y margen del último año fiscal.")
 
@@ -507,7 +519,7 @@ if vista == "General":
         if sobreventa.empty:
             st.info(f"Ninguna empresa del filtro actual tiene {COL_RSI} bajo {RSI_BAJO}.")
         else:
-            mostrar_tabla(sobreventa.sort_values(COL_RSI), "tabla_rsi")
+            mostrar_tabla(sobreventa.sort_values(COL_RSI), "tabla_rsi", 1)
 
     with tab_seg:
         seg = leer_seguimiento()
@@ -529,7 +541,7 @@ if vista == "General":
             t.insert(4, "Agregada", t["Ticker"].map(lambda x: seg[x]["fecha"]))
             t.insert(5, "Precio al agregar", t["Ticker"].map(lambda x: seg[x]["precio"]))
             t.insert(7, "Desde que se agregó %", (t["Precio"] / t["Precio al agregar"] - 1) * 100)
-            mostrar_tabla(t, "tabla_seg", height=min(650, 38 + 35 * len(t)))
+            mostrar_tabla(t, "tabla_seg", 2, height=min(650, 38 + 35 * len(t)))
         if config_gist()[0]:
             st.caption("✅ Guardado en GitHub Gist: se mantiene entre sesiones y dispositivos. "
                        "No depende de los filtros del panel izquierdo.")
@@ -553,7 +565,8 @@ else:
     fila = data[data["Ticker"] == ticker].iloc[0]
     ci = info.get(ticker, {})
 
-    if st.button("← Volver a la lista"):
+    origen = PESTANAS[st.session_state.get("_pestana_origen", 0)]
+    if st.button(f"← Volver a {origen}"):
         st.session_state["_volver"] = True
         st.rerun()
 
