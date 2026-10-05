@@ -89,14 +89,26 @@ def macd(close):
     return linea, senal, linea - senal
 
 
-def senal_macd(hist):
-    """Estado según el signo del histograma y si sube o baja respecto a la sesión anterior."""
+def senal_macd(linea, senal, hist):
+    """Estado según el histograma (MACD − señal), si sube o baja respecto a la sesión
+    anterior y si ambas líneas están bajo cero.
+
+    Cruce alcista  el MACD cruzó sobre su señal en la última sesión, con ambas bajo cero
+    Pre-cruce      histograma negativo pero subiendo, con ambas líneas bajo cero
+    Alcista        histograma positivo y subiendo
+    Perdiendo fuerza  histograma positivo pero cayendo
+    Bajista        el resto (incluye histograma negativo subiendo con las líneas sobre
+                   cero: eso no cuenta como pre-cruce)
+    """
     if len(hist) < 2 or hist.iloc[-2:].isna().any():
         return "Sin datos"
     act, prev = hist.iloc[-1], hist.iloc[-2]
+    bajo_cero = linea.iloc[-1] < 0 and senal.iloc[-1] < 0
+    if prev < 0 <= act and bajo_cero:
+        return "Cruce alcista"
     if act >= 0:
         return "Alcista" if act >= prev else "Perdiendo fuerza"
-    return "Pre-cruce" if act >= prev else "Bajista"
+    return "Pre-cruce" if act >= prev and bajo_cero else "Bajista"
 
 
 # ---------------------------------------------------------------------------
@@ -270,11 +282,11 @@ def resumen(_sello_key):
         close = df["Close"]
         precio = float(close.iloc[-1])
         r = rsi(close).iloc[-1]
-        hist = macd(close)[2]
+        m_lin, m_sen, hist = macd(close)
         fila = {"Ticker": t, "Nombre": i.get("name", t), "Universo": i.get("universe", "?"),
                 "Sector": i.get("sector", "Sin clasificar"), "Precio": precio,
                 COL_RSI: r, "Señal RSI": senal_rsi(r),
-                "MACD hist %": hist.iloc[-1] / precio * 100, "Señal MACD": senal_macd(hist)}
+                "MACD hist %": hist.iloc[-1] / precio * 100, "Señal MACD": senal_macd(m_lin, m_sen, hist)}
         for col, n in RETORNOS.items():
             fila[col] = (precio / close.iloc[-n - 1] - 1) * 100 if len(close) > n else None
         fila.update(multiplos(t, precio))
@@ -446,7 +458,7 @@ PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento"]   # para el bo
 # Señales que se ordenan por su significado y no alfabéticamente
 ORDEN_SENAL = {
     "Señal RSI": {"Sobreventa": 0, "Neutral": 1, "Sobrecompra": 2},
-    "Señal MACD": {"Bajista": 0, "Perdiendo fuerza": 1, "Pre-cruce": 2, "Alcista": 3},
+    "Señal MACD": {"Bajista": 0, "Perdiendo fuerza": 1, "Pre-cruce": 2, "Cruce alcista": 3, "Alcista": 4},
 }
 SIN_ORDEN = "(sin orden)"
 
@@ -629,7 +641,7 @@ if vista == "General":
     st.caption("Marca la casilla de una fila para abrir la empresa · usa **Ordenar por** para que el orden "
                "se mantenga al volver de una empresa (el click en el título de una columna también ordena, "
                f"pero ese orden se pierde). {COL_RSI}: sobre {RSI_ALTO} = sobrecompra, bajo {RSI_BAJO} = sobreventa · "
-               f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}: Pre-cruce = histograma negativo pero subiendo.")
+               f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}: **Cruce alcista** = el MACD cruzó sobre su señal en la última sesión con ambas líneas bajo cero · **Pre-cruce** = histograma negativo pero subiendo, también con ambas bajo cero.")
 
     sobreventa = filtrado[filtrado[COL_RSI] < RSI_BAJO]
     etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento"]
@@ -789,7 +801,7 @@ else:
                 fila["Señal RSI"], delta_color="off")
     c[2].metric(f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}", f"{fila['MACD hist %']:+.2f}%",
                 fila["Señal MACD"], delta_color="off",
-                help="Histograma (MACD − señal) como % del precio")
+                help="Histograma (MACD − señal) como % del precio. Cruce alcista y Pre-cruce solo cuentan con ambas líneas bajo cero.")
     c[3].metric("1 año", fmt_pct(fila["1a %"]))
     c[4].metric("P/E", f"{fila['P/E']:.1f}x" if pd.notna(fila["P/E"]) else "—")
     c[5].metric("EV/EBITDA", f"{fila['EV/EBITDA']:.1f}x" if pd.notna(fila["EV/EBITDA"]) else "—")
