@@ -87,6 +87,11 @@ def operaciones(ticker, df, periodo=5, compra=30, venta=70, costo=0.1, entrada="
     comprar = senal_compra(cierre, r, entrada, compra, ventana)
     n = len(df)
     ops, i_ent = [], None
+
+    def agregar(op, i_senal):
+        op.update({"RSI señal": r[i_senal], "Cierre señal": cierre[i_senal]})
+        ops.append(op)
+
     for t in range(n - 1):
         if np.isnan(r[t]):
             continue
@@ -94,10 +99,17 @@ def operaciones(ticker, df, periodo=5, compra=30, venta=70, costo=0.1, entrada="
             i_ent = t + 1                                    # entra en la apertura siguiente
             senal = t
         elif i_ent is not None and r[t] > venta and t + 1 > i_ent:
-            ops.append(_op(ticker, fechas, aper, senal, i_ent, t + 1, aper[t + 1], costo, False))
+            agregar(_op(ticker, fechas, aper, senal, i_ent, t + 1, aper[t + 1], costo, False), senal)
             i_ent = None
     if i_ent is not None and i_ent < n:                      # sigue abierta: al último cierre
-        ops.append(_op(ticker, fechas, aper, senal, i_ent, n - 1, cierre[-1], costo, True))
+        op = _op(ticker, fechas, aper, senal, i_ent, n - 1, cierre[-1], costo, True)
+        op["Venta pendiente"] = bool(r[-1] > venta)          # se vende en la próxima apertura
+        agregar(op, senal)
+    elif i_ent is None and n and not np.isnan(r[-1]) and comprar[-1]:
+        # señal en la última sesión: la compra sería en la próxima apertura
+        agregar({"Ticker": ticker, "Señal": pd.Timestamp(fechas[-1]), "Entrada": pd.NaT, "Salida": pd.NaT,
+                 "Precio entrada": np.nan, "Precio salida": cierre[-1], "Días": 0, "Retorno %": np.nan,
+                 "Abierta": True, "Pendiente": True}, n - 1)
     return ops
 
 
@@ -139,7 +151,10 @@ def correr(precios, sector_de, periodo=5, compra=30, venta=70, costo=0.1, entrad
             o["Exceso %"] = o["Retorno %"] - o["Base %"]
             o["Sector"] = sector_de.get(t, "Sin clasificar")
         filas += ops
-    return pd.DataFrame(filas)
+    out = pd.DataFrame(filas)
+    for c in ["Pendiente", "Venta pendiente"]:
+        out[c] = out[c].fillna(False).astype(bool) if c in out else False
+    return out
 
 
 def agregar_sector(ops, s, ratio, mom):

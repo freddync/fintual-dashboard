@@ -452,10 +452,18 @@ COLUMNAS = {
     "Marg. neto %": st.column_config.NumberColumn(format="%.1f%%"),
     "P/E": st.column_config.NumberColumn(format="%.1fx"),
     "EV/EBITDA": st.column_config.NumberColumn(format="%.1fx"),
+    # pestaña Señales
+    "Fecha señal": st.column_config.DateColumn(format="DD-MM-YYYY"),
+    "Compra": st.column_config.DateColumn(format="DD-MM-YYYY"),
+    "RSI señal": st.column_config.NumberColumn(format="%.1f"),
+    "Umbral": st.column_config.NumberColumn(format="< %d"),
+    "Precio compra": st.column_config.NumberColumn(format="%.2f"),
+    "Precio actual / venta": st.column_config.NumberColumn(format="%.2f"),
+    "Retorno %": PCT,
 }
 
 
-PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento"]   # para el botón de volver
+PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento", "Señales"]   # para el botón de volver
 
 
 # Señales que se ordenan por su significado y no alfabéticamente
@@ -534,6 +542,40 @@ def correr_backtest(compra, venta, costo, universos, _sello_key, version="", ent
         return ops
     s, ratio, mom = datos_sectores("Diaria", universos, _sello_key, version)
     return backtest.agregar_sector(ops, s, ratio, mom)
+
+
+# Configuración de la señal elegida en el backtest (MACD golden cross por abajo + RSI < umbral
+# el mismo día; venta con RSI > 70). Umbral por sector según la comparación 20/30/40.
+UMBRAL_SECTOR = {
+    "Tecnología": 20, "Industrial": 20, "Consumo discrecional": 20, "Financiero": 20,
+    "Bienes raíces": 30, "Energía": 30, "Consumo básico": 30,
+    "Servicios públicos": 40, "Materiales": 40,
+}   # Salud y Servicios de comunicación quedan fuera: la señal no les agregó valor
+CUADRANTES_EXCLUIDOS = {"Debilitándose"}   # sector perdiendo fuerza: la señal rinde la mitad
+
+
+@st.cache_data(show_spinner="Buscando señales...")
+def senales_config(universos, _sello_key, version=""):
+    """Todas las señales de la configuración, cada una con su seguimiento (abierta, vendida...)."""
+    partes = []
+    for u in sorted(set(UMBRAL_SECTOR.values())):
+        o = correr_backtest(u, RSI_ALTO, 0.1, universos, _sello_key, version, "macd_y_rsi", 10)
+        if not o.empty:
+            sect = [x for x, v in UMBRAL_SECTOR.items() if v == u]
+            partes.append(o[o["Sector"].isin(sect)].assign(Umbral=u))
+    if not partes:
+        return pd.DataFrame()
+    o = pd.concat(partes)
+    return o[~o["Cuadrante sector"].isin(CUADRANTES_EXCLUIDOS)].sort_values(["Señal", "Ticker"],
+                                                                           ascending=[False, True])
+
+
+def estado_senal(fila, provisional):
+    if fila["Pendiente"]:
+        return "🟡 Provisional (sesión en curso)" if provisional else "🟢 Comprar en la apertura"
+    if fila["Abierta"]:
+        return "🔴 Vender en la apertura" if fila["Venta pendiente"] else "🔵 Abierta"
+    return "⚪ Vendida"
 
 
 def periodo_en_curso(fecha, frecuencia):
@@ -702,14 +744,14 @@ if vista == "General":
                f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}: **Cruce alcista** = el MACD cruzó sobre su señal en la última sesión con ambas líneas bajo cero · **Pre-cruce** = histograma negativo pero subiendo, también con ambas bajo cero.")
 
     sobreventa = filtrado[filtrado[COL_RSI] < RSI_BAJO]
-    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento"]
+    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento", "🎯 Señales"]
     # al volver desde una empresa se abre la pestaña de donde se vino
     destino = st.session_state.pop("_ir_a_pestana", None)
     if destino is not None:
         st.session_state["pestanas"] = etiquetas[destino]
     if st.session_state.get("pestanas") not in etiquetas:   # el conteo del título cambió
         st.session_state.pop("pestanas", None)
-    tab_todas, tab_rsi, tab_seg = st.tabs(etiquetas, key="pestanas", on_change="rerun")
+    tab_todas, tab_rsi, tab_seg, tab_sen = st.tabs(etiquetas, key="pestanas", on_change="rerun")
 
     with tab_todas:
         mostrar_tabla(filtrado, "tabla_general", 0)
@@ -749,6 +791,68 @@ if vista == "General":
         else:
             st.caption("⚠️ Guardado en data/seguimiento.json (archivo local). En Streamlit Cloud se pierde "
                        "al redeployar: configura los secrets [seguimiento] gist_id y token.")
+
+    with tab_sen:
+        # se calcula solo cuando la pestaña está abierta (el cálculo tarda unos segundos)
+        if st.session_state.get("pestanas") != "🎯 Señales":
+            st.caption("Abre esta pestaña para calcular las señales.")
+        else:
+            st.caption(
+                f"Señal: **MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL} golden cross por abajo + {COL_RSI} bajo el "
+                "umbral, el mismo día**. Umbral por sector: " +
+                " · ".join(f"**{COL_RSI} < {u}**: " + ", ".join(x for x, v in UMBRAL_SECTOR.items() if v == u)
+                           for u in sorted(set(UMBRAL_SECTOR.values()))) +
+                ". Fuera: Salud, Servicios de comunicación y señales con el sector **Debilitándose**. "
+                f"⭐ = sector **Mejorando** (el mejor contexto). Venta: {COL_RSI} > {RSI_ALTO}. Compra y venta "
+                "en la apertura del día siguiente a la señal.")
+            sen = senales_config(tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+            if sector != "Todos" and not sen.empty:
+                sen = sen[sen["Sector"] == sector]
+            if sen.empty:
+                st.info("No hay señales con la configuración y los filtros actuales.")
+            else:
+                sesiones = sorted(sen["Señal"].unique(), reverse=True)
+                n_ses = st.select_slider("Mostrar señales de las últimas", [5, 10, 20, 60, 120], value=20,
+                                         format_func=lambda n: f"{n} sesiones con señal")
+                ventana_s = sen[sen["Señal"] >= sesiones[min(n_ses, len(sesiones)) - 1]]
+                ult = sen["Señal"].max()
+                provisional = periodo_en_curso(ult, "Diaria")
+                nombres = data.set_index("Ticker")["Nombre"]
+                t = pd.DataFrame({
+                    "Ticker": ventana_s["Ticker"],
+                    "Nombre": ventana_s["Ticker"].map(nombres),
+                    "Sector": ventana_s["Sector"],
+                    "Fecha señal": ventana_s["Señal"],
+                    "Estado": [estado_senal(f, provisional and f["Señal"] == ult) for _, f in ventana_s.iterrows()],
+                    "RSI señal": ventana_s["RSI señal"],
+                    "Umbral": ventana_s["Umbral"],
+                    "Cuadrante sector": [("⭐ " if q == "Mejorando" else "") + q for q in ventana_s["Cuadrante sector"]],
+                    "Flujo sector": ventana_s["Flujo sector"],
+                    "Compra": ventana_s["Entrada"],
+                    "Precio compra": ventana_s["Precio entrada"],
+                    "Precio actual / venta": ventana_s["Precio salida"],
+                    "Retorno %": ventana_s["Retorno %"],
+                    "Días": ventana_s["Días"],
+                })
+                nuevas = (ventana_s["Señal"] == ult).sum()
+                abiertas = ventana_s["Abierta"] & ~ventana_s["Pendiente"]
+                k = st.columns(4)
+                k[0].metric(f"Señales del {ult:%d-%b}", f"{nuevas}",
+                            "provisionales: la sesión sigue abierta" if provisional else None, delta_color="off")
+                k[1].metric("Posiciones abiertas", f"{abiertas.sum()}")
+                k[2].metric("Retorno prom. abiertas", f"{ventana_s.loc[abiertas, 'Retorno %'].mean():+.2f}%"
+                            if abiertas.any() else "—")
+                cerr = ~ventana_s["Abierta"]
+                k[3].metric("Vendidas: % ganadoras", f"{(ventana_s.loc[cerr, 'Retorno %'] > 0).mean() * 100:.0f}%"
+                            if cerr.any() else "—", f"{cerr.sum()} vendidas", delta_color="off")
+                mostrar_tabla(t, "tabla_senales", 3, height=min(650, 38 + 35 * len(t)))
+                st.caption(
+                    "**Estado**: 🟢 señal de la última sesión, se compra en la próxima apertura · 🟡 señal de la "
+                    "sesión en curso: puede desaparecer antes del cierre · 🔵 comprada, esperando la venta · "
+                    f"🔴 el {COL_RSI} ya pasó {RSI_ALTO}: se vende en la próxima apertura · ⚪ ya vendida. "
+                    "**Retorno %** = desde la compra hasta el precio actual (o la venta), descontando 0,1% de "
+                    "costo. Una empresa no repite señal mientras su posición anterior siga abierta. Es la "
+                    "aplicación de un backtest, no una recomendación de inversión.")
 
 
 # ---------------------------------------------------------------------------
