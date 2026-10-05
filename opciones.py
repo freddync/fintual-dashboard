@@ -52,6 +52,25 @@ def muros(ticker, precio):
     return out
 
 
+def noticias(ticker, n=10):
+    """Últimas noticias del ticker según la búsqueda de Yahoo Finance."""
+    r = requests.get("https://query2.finance.yahoo.com/v1/finance/search",
+                     params={"q": ticker, "newsCount": n, "quotesCount": 0},
+                     headers=HEADERS, timeout=15)
+    r.raise_for_status()
+    out = []
+    for x in r.json().get("news", []):
+        out.append({
+            "titulo": x.get("title", ""),
+            "fuente": x.get("publisher", ""),
+            "link": x.get("link", ""),
+            "fecha": pd.to_datetime(x.get("providerPublishTime"), unit="s", utc=True)
+                       .tz_convert("America/New_York") if x.get("providerPublishTime") else None,
+            "otros": [t for t in x.get("relatedTickers") or [] if t != ticker],
+        })
+    return out
+
+
 def velas_1h(ticker):
     """Velas de 1 hora de los últimos 5 días hábiles, en hora de Nueva York."""
     r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",

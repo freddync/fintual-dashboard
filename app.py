@@ -20,12 +20,15 @@ import hashlib
 import importlib
 
 import opciones
+import sectores
 
 # Streamlit Cloud, al recibir un push, vuelve a ejecutar app.py pero puede seguir
-# usando la versión anterior de opciones.py que tenía en memoria
+# usando la versión anterior de los módulos que tenía en memoria
 importlib.reload(opciones)
+importlib.reload(sectores)
 # cambia cuando cambia opciones.py: invalida lo cacheado con la versión anterior
-VERSION_OPCIONES = hashlib.md5(open(opciones.__file__, "rb").read()).hexdigest()
+VERSION_OPCIONES = hashlib.md5(open(opciones.__file__, "rb").read()
+                               + open(sectores.__file__, "rb").read()).hexdigest()
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 PRECIOS_DIR = os.path.join(DATA_DIR, "precios")
@@ -325,6 +328,14 @@ def cargar_muros(ticker, precio, version=""):
         return None, f"{type(e).__name__}: {e}"
 
 
+@st.cache_data(ttl=1800, show_spinner="Buscando noticias...")
+def cargar_noticias(ticker, version=""):
+    try:
+        return opciones.noticias(ticker), None
+    except Exception as e:
+        return None, f"{type(e).__name__}: {e}"
+
+
 @st.cache_data(ttl=900, show_spinner="Descargando velas de 1 hora...")
 def cargar_velas_1h(ticker, version=""):
     try:
@@ -447,6 +458,99 @@ def mostrar_tabla(tabla, key, pestana, height=650):
 
 
 # ---------------------------------------------------------------------------
+# Rotación sectorial
+# ---------------------------------------------------------------------------
+
+N_CALOR = 20   # períodos del mapa de calor
+COLOR_CUADRANTE = {"Liderando": "#3ecf8e", "Debilitándose": "#e6b45e",
+                   "Rezagado": "#ef5a6f", "Mejorando": "#5ea8e6"}
+
+
+@st.cache_data(show_spinner="Calculando la rotación sectorial...")
+def datos_sectores(frecuencia, universos, _sello_key, version=""):
+    """Series por sector + RRG del universo elegido (`_sello_key` invalida al llegar precios nuevos)."""
+    info_ = cargar_info()
+    tickers = [t for t, i in info_.items() if i.get("universe") in universos]
+    precios = {t: df for t in tickers if (df := cargar_precios(t)) is not None}
+    cierre, dolares = sectores.paneles(precios, frecuencia)
+    s = sectores.series(cierre, dolares, {t: info_[t].get("sector", "Sin clasificar") for t in precios})
+    ratio, mom = sectores.rrg(s["rs"], frecuencia)
+    return s, ratio, mom
+
+
+def periodo_en_curso(fecha, frecuencia):
+    """¿El último período todavía no cierra? (hora de Nueva York, cierre ~16:15)."""
+    ahora = datetime.datetime.now(ZoneInfo("America/New_York"))
+    hoy, abierto = ahora.date(), (ahora.hour, ahora.minute) < (16, 15)
+    if frecuencia == "Diaria":
+        return fecha.date() == hoy and abierto
+    return fecha.date() > hoy or (fecha.date() == hoy and abierto)
+
+
+def colorear_num(v):
+    if isinstance(v, (int, float)) and pd.notna(v):
+        return "color: #3ecf8e" if v > 0 else "color: #ef5a6f" if v < 0 else ""
+    return ""
+
+
+def grafico_rrg(ratio, mom, fecha, cola=6):
+    """Gráfico de rotación relativa: cada sector con su cola de los últimos períodos."""
+    r, m = ratio.loc[:fecha].tail(cola), mom.loc[:fecha].tail(cola)
+    fig = go.Figure()
+    colores = px_colores()
+    for i, sec in enumerate(r.columns):
+        x, y = r[sec], m[sec]
+        if x.isna().all() or y.isna().all():
+            continue
+        c = colores[i % len(colores)]
+        fig.add_trace(go.Scatter(x=x, y=y, mode="lines+markers", line=dict(color=c, width=1.5),
+                                 marker=dict(size=[4] * (len(x) - 1) + [11], color=c),
+                                 name=sec, hovertemplate=f"{sec}<br>RS-Ratio %{{x:.2f}}<br>"
+                                                         "RS-Momentum %{y:.2f}<extra></extra>"))
+        fig.add_annotation(x=x.iloc[-1], y=y.iloc[-1], text=sec, showarrow=False, yshift=12,
+                           font=dict(size=10, color=c))
+    # cuadrantes simétricos alrededor de 100
+    dx = max(abs(r.stack() - 100).max(), 0.5) * 1.15
+    dy = max(abs(m.stack() - 100).max(), 0.5) * 1.15
+    for x0, x1, y0, y1, txt, c, xa, ya in [
+            (100, 100 + dx, 100, 100 + dy, "Liderando", "#3ecf8e", "right", "top"),
+            (100, 100 + dx, 100 - dy, 100, "Debilitándose", "#e6b45e", "right", "bottom"),
+            (100 - dx, 100, 100 - dy, 100, "Rezagado", "#ef5a6f", "left", "bottom"),
+            (100 - dx, 100, 100, 100 + dy, "Mejorando", "#5ea8e6", "left", "top")]:
+        fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, fillcolor=c, opacity=0.06,
+                      line_width=0, layer="below")
+        fig.add_annotation(x=x1 if xa == "right" else x0, y=y1 if ya == "top" else y0, text=txt,
+                           showarrow=False, xanchor=xa, yanchor=ya, font=dict(size=12, color=c))
+    fig.add_hline(y=100, line=dict(color="#8b93a3", width=1))
+    fig.add_vline(x=100, line=dict(color="#8b93a3", width=1))
+    fig.update_xaxes(range=[100 - dx, 100 + dx], title_text="RS-Ratio (fuerza relativa)")
+    fig.update_yaxes(range=[100 - dy, 100 + dy], title_text="RS-Momentum (aceleración)")
+    fig.update_layout(height=600, template="plotly_dark", showlegend=False, margin=dict(t=10, b=10))
+    return fig
+
+
+def px_colores():
+    return ["#5ea8e6", "#e6b45e", "#3ecf8e", "#ef5a6f", "#b98af0", "#f08ac8",
+            "#6de0d8", "#d8e06d", "#f0a35e", "#8fa8ff", "#c9c9c9"]
+
+
+def grafico_calor(df, fecha, frecuencia, clave):
+    """Sectores (filas) x últimos períodos (columnas)."""
+    d = df.loc[:fecha].tail(N_CALOR)
+    d = d[d.iloc[-1].sort_values(ascending=False).index]          # el mejor del período, arriba
+    x = [f"{f:%d-%b}" for f in d.index]
+    centro = 50 if clave == "alza" else 0
+    lim = (d - centro).abs().quantile(0.95).max() or 1
+    fig = go.Figure(go.Heatmap(
+        z=d.T.values, x=x, y=list(d.columns), colorscale="RdYlGn", zmid=centro,
+        zmin=centro - lim, zmax=centro + lim, xgap=1, ygap=1,
+        hovertemplate="%{y} · %{x}: %{z:.2f}<extra></extra>"))
+    fig.update_layout(height=40 * len(d.columns) + 80, template="plotly_dark", margin=dict(t=10, b=10))
+    fig.update_yaxes(autorange="reversed")
+    return fig
+
+
+# ---------------------------------------------------------------------------
 # Barra lateral
 # ---------------------------------------------------------------------------
 
@@ -475,7 +579,7 @@ if st.session_state.pop("_volver", False):
     st.session_state["_ir_a_pestana"] = st.session_state.get("_pestana_origen", 0)
 
 st.sidebar.title("📈 Fintual")
-vista = st.sidebar.radio("Vista", ["General", "Empresa"], horizontal=True, key="vista")
+vista = st.sidebar.radio("Vista", ["General", "Sectores", "Empresa"], horizontal=True, key="vista")
 universos = sorted(data["Universo"].unique())
 sel_uni = st.sidebar.multiselect("Universo", universos, default=universos)
 sector = st.sidebar.selectbox("Sector", ["Todos"] + sorted(data["Sector"].unique()))
@@ -551,6 +655,73 @@ if vista == "General":
 
 
 # ---------------------------------------------------------------------------
+# Vista sectores (rotación)
+# ---------------------------------------------------------------------------
+
+elif vista == "Sectores":
+    st.title("Rotación sectorial")
+    st.caption("Cómo se mueven los sectores entre sí, en precio y en volumen. Pesos iguales: cada empresa "
+               "pesa lo mismo dentro de su sector. 'Mercado' = promedio de todas las empresas del universo "
+               "elegido a la izquierda (el filtro de sector no aplica aquí).")
+
+    frec = st.radio("Frecuencia", ["Diaria", "Semanal"], horizontal=True, key="frec_sect")
+    s, ratio, mom = datos_sectores(frec, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+    fechas = list(s["rs"].index[-60:])
+    en_curso = periodo_en_curso(fechas[-1], frec)
+    etiqueta = {f: (f"{f:%d-%b-%Y}" if frec == "Diaria" else f"semana al {f:%d-%b-%Y}")
+                   + (" (en curso)" if f == fechas[-1] and en_curso else "") for f in fechas}
+    fecha = st.select_slider("Período (muévelo para ver rotaciones pasadas)", options=fechas,
+                             value=fechas[-2] if en_curso else fechas[-1],
+                             format_func=lambda f: etiqueta[f])
+    if fecha == fechas[-1] and en_curso:
+        st.warning("Período en curso: el retorno es parcial y el volumen todavía está incompleto, así que "
+                   "el volumen relativo sale bajo. Para comparar volumen, usa el último período completo.")
+
+    tb = sectores.tabla(s, ratio, mom, fecha, frec)
+    numericas = ["Retorno %", "vs mercado (pp)", "Δ participación (pp)", "Relativo 1m %", "Relativo 3m %"]
+    st.dataframe(
+        tb.style.map(colorear_num, subset=numericas)
+                .map(lambda v: f"color: {COLOR_CUADRANTE.get(v, '')}; font-weight: 600", subset=["Cuadrante"]),
+        hide_index=True, width="stretch", column_config={
+            "Retorno %": st.column_config.NumberColumn(format="%+.2f%%"),
+            "vs mercado (pp)": st.column_config.NumberColumn(format="%+.2f"),
+            "% al alza": st.column_config.ProgressColumn(format="%.0f%%", min_value=0, max_value=100),
+            "Vol. relativo": st.column_config.NumberColumn(format="%.2fx"),
+            "Part. volumen %": st.column_config.NumberColumn(format="%.1f%%"),
+            "Δ participación (pp)": st.column_config.NumberColumn(format="%+.2f"),
+            "Relativo 1m %": st.column_config.NumberColumn(format="%+.1f%%"),
+            "Relativo 3m %": st.column_config.NumberColumn(format="%+.1f%%"),
+        })
+    st.caption(
+        "**vs mercado** = retorno del sector menos el del mercado · **% al alza** = parte de las empresas del "
+        "sector que subió (amplitud) · **Vol. relativo** = volumen en dólares del período / su promedio de los "
+        f"{sectores.VENTANA_VOL} anteriores · **Part. volumen** = parte del volumen en dólares del mercado que "
+        "se transó en el sector · **Δ participación** = participación actual menos su promedio: positivo = "
+        "está entrando más dinero que lo habitual · **Relativo 1m/3m** = cuánto le ganó (o perdió) al "
+        "mercado en ese plazo. Una rotación se ve como sectores con **vs mercado** y **Δ participación** "
+        "positivos (entra dinero y suben más que el resto) mientras otros pierden ambas cosas.")
+
+    st.subheader("Gráfico de rotación relativa (RRG)")
+    st.plotly_chart(grafico_rrg(ratio, mom, fecha), width="stretch")
+    ventana, rezago = sectores.RRG[frec]
+    st.caption(
+        f"Eje X: **RS-Ratio** = fuerza relativa del sector contra el mercado (sobre 100 = le gana a su "
+        f"promedio de {ventana} períodos). Eje Y: **RS-Momentum** = si esa fuerza acelera (sobre 100) o frena. "
+        "La cola muestra los últimos 6 períodos. Las rotaciones suelen avanzar en el sentido de las agujas del "
+        "reloj: **Mejorando → Liderando → Debilitándose → Rezagado**. Un sector que pasa de Rezagado a "
+        "Mejorando es candidato a recibir la próxima rotación.")
+
+    st.subheader("Mapa de calor: cómo ha ido rotando")
+    metrica = st.radio("Métrica", ["Retorno vs mercado (pp)", "Δ participación de volumen (pp)",
+                                   "Amplitud (% al alza)"], horizontal=True)
+    clave = {"Retorno vs mercado (pp)": "rel", "Δ participación de volumen (pp)": "d_part",
+             "Amplitud (% al alza)": "alza"}[metrica]
+    st.plotly_chart(grafico_calor(s[clave], fecha, frec, clave), width="stretch")
+    st.caption(f"Últimos {N_CALOR} períodos hasta el elegido. Verde = el sector le ganó al mercado / ganó "
+               "participación de volumen / subió la mayoría de sus empresas; rojo = lo contrario.")
+
+
+# ---------------------------------------------------------------------------
 # Vista empresa
 # ---------------------------------------------------------------------------
 
@@ -594,6 +765,22 @@ else:
     c[3].metric("1 año", fmt_pct(fila["1a %"]))
     c[4].metric("P/E", f"{fila['P/E']:.1f}x" if pd.notna(fila["P/E"]) else "—")
     c[5].metric("EV/EBITDA", f"{fila['EV/EBITDA']:.1f}x" if pd.notna(fila["EV/EBITDA"]) else "—")
+
+    # ---- últimas noticias ----
+    with st.expander("📰 Últimas noticias", expanded=True):
+        notas, err_n = cargar_noticias(ticker, VERSION_OPCIONES)
+        if err_n:
+            st.caption(f"No se pudieron cargar las noticias: {err_n}")
+        elif not notas:
+            st.caption("Yahoo no tiene noticias recientes para esta empresa.")
+        else:
+            for nt in notas:
+                cuando = f"{nt['fecha']:%d-%b %H:%M} NY" if nt["fecha"] is not None else ""
+                otros = f" · también: {', '.join(nt['otros'][:4])}" if nt["otros"] else ""
+                st.markdown(f"[{nt['titulo']}]({nt['link']})  \n"
+                            f"<small style='color:#8b93a3'>{nt['fuente']} · {cuando}{otros}</small>",
+                            unsafe_allow_html=True)
+            st.caption("Fuente: Yahoo Finance (se actualiza cada 30 minutos).")
 
     # ---- gráfico: precio, volumen, RSI y MACD con el mismo eje de tiempo ----
     df = cargar_precios(ticker)
