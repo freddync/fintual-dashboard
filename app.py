@@ -630,17 +630,24 @@ else:
     fig.update_yaxes(title_text=f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}", row=4, col=1)
     # líneas de tendencia guardadas: se prolongan hasta el último día del gráfico
     lineas = leer_lineas(ticker)
-    fin = d["Date"].iloc[-1]
+    ini, fin = d["Date"].iloc[0], d["Date"].iloc[-1]
     for ln in lineas:
         x0, x1 = pd.Timestamp(ln["x0"]), pd.Timestamp(ln["x1"])
         pend = (ln["y1"] - ln["y0"]) / max((x1 - x0).days, 1)
-        x_fin = max(x1, fin)
-        fig.add_trace(go.Scatter(x=[x0, x_fin], y=[ln["y0"], ln["y0"] + pend * (x_fin - x0).days],
+        # se dibuja solo el tramo visible: desde el inicio del rango (si la línea
+        # parte antes) hasta el último día del gráfico
+        xa, xb = max(x0, ini), max(x1, fin)
+        if xa >= xb:
+            continue
+        fig.add_trace(go.Scatter(x=[xa, xb], y=[ln["y0"] + pend * (xa - x0).days,
+                                                ln["y0"] + pend * (xb - x0).days],
                                  mode="lines", line=dict(color="#e6b45e", width=1.6),
                                  hoverinfo="skip"), row=1, col=1)
     fig.update_yaxes(range=[d["Low"].min() * 0.97, d["High"].max() * 1.03], row=1, col=1)
 
-    fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])], rangeslider_visible=False)
+    # el eje X queda fijo al período de las velas (las líneas no lo estiran)
+    fig.update_xaxes(range=[ini - pd.Timedelta(days=1), fin + pd.Timedelta(days=1)],
+                     rangebreaks=[dict(bounds=["sat", "mon"])], rangeslider_visible=False)
     fig.update_layout(height=800, template="plotly_dark", showlegend=False,
                       margin=dict(t=10, b=10), bargap=0.1,
                       newshape=dict(line=dict(color="#e6b45e", width=2)))
