@@ -324,6 +324,11 @@ def fmt_money(x):
     return f"{x:,.2f}"
 
 
+def fmt_cantidad(x):
+    """Cantidad de acciones con hasta 9 decimales, sin ceros sobrantes."""
+    return f"{x:,.9f}".rstrip("0").rstrip(".")
+
+
 def fmt_pct(x):
     return "—" if pd.isna(x) else f"{x:+.1f}%"
 
@@ -481,7 +486,7 @@ COLUMNAS = {
     # pestaña Mi cartera
     "Fecha compra": st.column_config.DateColumn(format="DD-MM-YYYY"),
     "Fecha venta": st.column_config.DateColumn(format="DD-MM-YYYY"),
-    "Cantidad": st.column_config.NumberColumn(format="%.4g"),
+    "Cantidad": st.column_config.NumberColumn(format="%.9f"),
     "Precio venta": st.column_config.NumberColumn(format="%.2f"),
     "Precio actual": st.column_config.NumberColumn(format="%.2f"),
     "Invertido": st.column_config.NumberColumn(format="$%,.2f"),
@@ -1020,7 +1025,7 @@ if vista == "General":
                 t_new = f1.selectbox("Ticker", sorted(data["Ticker"]), index=None, placeholder="Escribe un ticker...")
                 fecha_new = f2.date_input("Fecha de compra", datetime.date.today())
                 cant_new = f3.number_input("Cantidad (acciones)", min_value=0.0, value=0.0, step=1.0,
-                                           format="%.6f", help="Acepta fracciones de acción.")
+                                           format="%.9f", help="Acepta fracciones de acción, hasta 9 decimales.")
                 precio_new = f4.number_input("Precio de compra", min_value=0.0, value=0.0, step=0.01, format="%.4f")
                 if st.form_submit_button("Guardar compra"):
                     if not t_new or cant_new <= 0 or precio_new <= 0:
@@ -1036,7 +1041,7 @@ if vista == "General":
         # ---- registrar una venta / eliminar ----
         if cart["posiciones"]:
             with st.expander("➖ Registrar una venta o eliminar un registro"):
-                etiqueta_pos = {p_["id"]: f"{p_['ticker']} · {p_['cantidad']:g} acc. a {p_['precio']:,.2f} "
+                etiqueta_pos = {p_["id"]: f"{p_['ticker']} · {fmt_cantidad(p_['cantidad'])} acc. a {p_['precio']:,.2f} "
                                           f"({p_['fecha']})" for p_ in cart["posiciones"]}
                 sel_id = st.selectbox("Posición", list(etiqueta_pos), format_func=etiqueta_pos.get)
                 pos_sel = next(p_ for p_ in cart["posiciones"] if p_["id"] == sel_id)
