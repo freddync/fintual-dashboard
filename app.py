@@ -463,7 +463,7 @@ COLUMNAS = {
 }
 
 
-PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento", "Señales"]   # para el botón de volver
+PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento", "Señales", "Hoy"]   # para el botón de volver
 
 
 # Señales que se ordenan por su significado y no alfabéticamente
@@ -576,6 +576,26 @@ def estado_senal(fila, provisional):
     if fila["Abierta"]:
         return "🔴 Vender en la apertura" if fila["Venta pendiente"] else "🔵 Abierta"
     return "⚪ Vendida"
+
+
+def tabla_senales(df, nombres, provisional, ult):
+    """Tabla para mostrar señales de la configuración."""
+    return pd.DataFrame({
+        "Ticker": df["Ticker"],
+        "Nombre": df["Ticker"].map(nombres),
+        "Sector": df["Sector"],
+        "Fecha señal": df["Señal"],
+        "Estado": [estado_senal(f, provisional and f["Señal"] == ult) for _, f in df.iterrows()],
+        "RSI señal": df["RSI señal"],
+        "Umbral": df["Umbral"],
+        "Cuadrante sector": [("⭐ " if q == "Mejorando" else "") + q for q in df["Cuadrante sector"]],
+        "Flujo sector": df["Flujo sector"],
+        "Compra": df["Entrada"],
+        "Precio compra": df["Precio entrada"],
+        "Precio actual / venta": df["Precio salida"],
+        "Retorno %": df["Retorno %"],
+        "Días": df["Días"],
+    })
 
 
 def periodo_en_curso(fecha, frecuencia):
@@ -744,14 +764,14 @@ if vista == "General":
                f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}: **Cruce alcista** = el MACD cruzó sobre su señal en la última sesión con ambas líneas bajo cero · **Pre-cruce** = histograma negativo pero subiendo, también con ambas bajo cero.")
 
     sobreventa = filtrado[filtrado[COL_RSI] < RSI_BAJO]
-    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento", "🎯 Señales"]
+    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento", "🎯 Señales", "🛒 Hoy"]
     # al volver desde una empresa se abre la pestaña de donde se vino
     destino = st.session_state.pop("_ir_a_pestana", None)
     if destino is not None:
         st.session_state["pestanas"] = etiquetas[destino]
     if st.session_state.get("pestanas") not in etiquetas:   # el conteo del título cambió
         st.session_state.pop("pestanas", None)
-    tab_todas, tab_rsi, tab_seg, tab_sen = st.tabs(etiquetas, key="pestanas", on_change="rerun")
+    tab_todas, tab_rsi, tab_seg, tab_sen, tab_hoy = st.tabs(etiquetas, key="pestanas", on_change="rerun")
 
     with tab_todas:
         mostrar_tabla(filtrado, "tabla_general", 0)
@@ -817,34 +837,24 @@ if vista == "General":
                 ventana_s = sen[sen["Señal"] >= sesiones[min(n_ses, len(sesiones)) - 1]]
                 ult = sen["Señal"].max()
                 provisional = periodo_en_curso(ult, "Diaria")
-                nombres = data.set_index("Ticker")["Nombre"]
-                t = pd.DataFrame({
-                    "Ticker": ventana_s["Ticker"],
-                    "Nombre": ventana_s["Ticker"].map(nombres),
-                    "Sector": ventana_s["Sector"],
-                    "Fecha señal": ventana_s["Señal"],
-                    "Estado": [estado_senal(f, provisional and f["Señal"] == ult) for _, f in ventana_s.iterrows()],
-                    "RSI señal": ventana_s["RSI señal"],
-                    "Umbral": ventana_s["Umbral"],
-                    "Cuadrante sector": [("⭐ " if q == "Mejorando" else "") + q for q in ventana_s["Cuadrante sector"]],
-                    "Flujo sector": ventana_s["Flujo sector"],
-                    "Compra": ventana_s["Entrada"],
-                    "Precio compra": ventana_s["Precio entrada"],
-                    "Precio actual / venta": ventana_s["Precio salida"],
-                    "Retorno %": ventana_s["Retorno %"],
-                    "Días": ventana_s["Días"],
-                })
+                t = tabla_senales(ventana_s, data.set_index("Ticker")["Nombre"], provisional, ult)
                 nuevas = (ventana_s["Señal"] == ult).sum()
                 abiertas = ventana_s["Abierta"] & ~ventana_s["Pendiente"]
-                k = st.columns(4)
+                cerr = ~ventana_s["Abierta"]
+                vend = ventana_s.loc[cerr, "Retorno %"]
+                k = st.columns(5)
                 k[0].metric(f"Señales del {ult:%d-%b}", f"{nuevas}",
                             "provisionales: la sesión sigue abierta" if provisional else None, delta_color="off")
                 k[1].metric("Posiciones abiertas", f"{abiertas.sum()}")
                 k[2].metric("Retorno prom. abiertas", f"{ventana_s.loc[abiertas, 'Retorno %'].mean():+.2f}%"
-                            if abiertas.any() else "—")
-                cerr = ~ventana_s["Abierta"]
-                k[3].metric("Vendidas: % ganadoras", f"{(ventana_s.loc[cerr, 'Retorno %'] > 0).mean() * 100:.0f}%"
-                            if cerr.any() else "—", f"{cerr.sum()} vendidas", delta_color="off")
+                            if abiertas.any() else "—", "aún sin vender", delta_color="off")
+                k[3].metric("Retorno prom. vendidas", f"{vend.mean():+.2f}%" if len(vend) else "—",
+                            f"{len(vend)} vendidas · mediana {vend.median():+.2f}%" if len(vend) else None,
+                            delta_color="off",
+                            help="Retorno de las posiciones ya cerradas (compra → venta), descontando 0,1% de costo.")
+                k[4].metric("Vendidas ganadoras", f"{(vend > 0).mean() * 100:.0f}%" if len(vend) else "—",
+                            f"mejor {vend.max():+.1f}% · peor {vend.min():+.1f}%" if len(vend) else None,
+                            delta_color="off")
                 mostrar_tabla(t, "tabla_senales", 3, height=min(650, 38 + 35 * len(t)))
                 st.caption(
                     "**Estado**: 🟢 señal de la última sesión, se compra en la próxima apertura · 🟡 señal de la "
@@ -853,6 +863,63 @@ if vista == "General":
                     "**Retorno %** = desde la compra hasta el precio actual (o la venta), descontando 0,1% de "
                     "costo. Una empresa no repite señal mientras su posición anterior siga abierta. Es la "
                     "aplicación de un backtest, no una recomendación de inversión.")
+
+    with tab_hoy:
+        if st.session_state.get("pestanas") != "🛒 Hoy":
+            st.caption("Abre esta pestaña para calcular las órdenes del día.")
+        else:
+            sen = senales_config(tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+            if sector != "Todos" and not sen.empty:
+                sen = sen[sen["Sector"] == sector]
+            if sen.empty:
+                st.info("No hay señales con la configuración y los filtros actuales.")
+            else:
+                ult = sen["Señal"].max()
+                provisional = periodo_en_curso(ult, "Diaria")
+                nombres = data.set_index("Ticker")["Nombre"]
+                st.warning(
+                    "Esta lista es el resultado **mecánico de tu configuración** (la que salió del backtest), no una "
+                    "recomendación de inversión: no soy asesor financiero. Antes de operar revisa cada empresa, "
+                    "confirma que esté disponible en Fintual y decide el monto según tu propio criterio.")
+                if provisional:
+                    st.info(f"La sesión del {ult:%d-%b} sigue abierta: las señales de hoy son **provisionales** y "
+                            "pueden desaparecer antes del cierre. Las definitivas quedan después de las 16:00 NY.")
+
+                compras = sen[sen["Pendiente"]].copy()
+                compras["_orden"] = (compras["Cuadrante sector"] != "Mejorando").astype(int)
+                compras = compras.sort_values(["_orden", "RSI señal"])
+                ventas = sen[sen["Venta pendiente"]]
+                k = st.columns(3)
+                k[0].metric("Para comprar", f"{len(compras)}", f"señales del {ult:%d-%b}", delta_color="off")
+                k[1].metric("Para vender", f"{len(ventas)}", f"{COL_RSI} sobre {RSI_ALTO}", delta_color="off")
+                k[2].metric("Posiciones que siguen abiertas",
+                            f"{(sen['Abierta'] & ~sen['Pendiente'] & ~sen['Venta pendiente']).sum()}")
+
+                st.subheader("🟢 Comprar")
+                if compras.empty:
+                    st.caption("Ninguna empresa cumple la regla de compra en la última sesión.")
+                else:
+                    tc = tabla_senales(compras, nombres, provisional, ult)
+                    tc = tc[["Ticker", "Nombre", "Sector", "Estado", "RSI señal", "Umbral", "Cuadrante sector",
+                             "Flujo sector", "Precio actual / venta"]].rename(
+                        columns={"Precio actual / venta": "Último cierre"})
+                    mostrar_tabla(tc, "tabla_compras", 4, height=min(450, 38 + 35 * len(tc)))
+                    st.caption(f"Regla: la compra se hace en la **apertura siguiente** a la señal del {ult:%d-%b}. "
+                               "Primero van las de sector ⭐ Mejorando (el contexto que mejor rindió) y luego por "
+                               f"{COL_RSI} más bajo. **Último cierre** es referencial: el precio real será el de la "
+                               "apertura.")
+
+                st.subheader("🔴 Vender")
+                if ventas.empty:
+                    st.caption(f"Ninguna posición abierta tiene el {COL_RSI} sobre {RSI_ALTO}.")
+                else:
+                    tv = tabla_senales(ventas, nombres, provisional, ult)
+                    tv = tv[["Ticker", "Nombre", "Sector", "Fecha señal", "Compra", "Precio compra",
+                             "Precio actual / venta", "Retorno %", "Días"]].rename(
+                        columns={"Precio actual / venta": "Último cierre"})
+                    mostrar_tabla(tv, "tabla_ventas", 4, height=min(450, 38 + 35 * len(tv)))
+                    st.caption(f"Posiciones de la regla cuyo {COL_RSI} cerró sobre {RSI_ALTO}: la venta se hace en "
+                               "la apertura siguiente. Solo aplica si compraste esa posición siguiendo la regla.")
 
 
 # ---------------------------------------------------------------------------
