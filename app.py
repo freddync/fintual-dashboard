@@ -18,6 +18,7 @@ import streamlit as st
 from plotly.subplots import make_subplots
 
 import hashlib
+import hmac
 import importlib
 
 import opciones
@@ -57,6 +58,39 @@ FUND_ROWS = [
 ]
 
 st.set_page_config(page_title="Fintual Dashboard", layout="wide", page_icon="📈")
+
+
+# ---------------------------------------------------------------------------
+# Contraseña de acceso
+# ---------------------------------------------------------------------------
+# La clave va en los secrets de Streamlit Cloud: `password = "..."` (arriba de la
+# sección [seguimiento]). Si no está configurada, la app queda abierta.
+
+def clave_configurada():
+    for leer in (lambda: st.secrets["password"], lambda: st.secrets["seguimiento"]["password"]):
+        try:
+            return str(leer())
+        except Exception:
+            pass
+    return None
+
+
+def pedir_clave():
+    clave = clave_configurada()
+    if clave is None or st.session_state.get("_acceso_ok"):
+        return
+    st.title("📈 Fintual")
+    with st.form("acceso"):
+        intento = st.text_input("Contraseña", type="password")
+        if st.form_submit_button("Entrar"):
+            if hmac.compare_digest(intento.encode(), clave.encode()):
+                st.session_state["_acceso_ok"] = True
+                st.rerun()
+            st.error("Contraseña incorrecta.")
+    st.stop()
+
+
+pedir_clave()
 
 
 # ---------------------------------------------------------------------------
@@ -788,6 +822,9 @@ st.sidebar.markdown(f"**{len(filtrado)}** de {len(data)} empresas")
 if sello:
     st.sidebar.caption(f"Precios actualizados: {sello.get('fecha', '?')} · "
                        f"última sesión: {sello.get('ultima_sesion', '?')}")
+if clave_configurada() is None and config_gist()[0]:
+    st.sidebar.warning("La app no tiene contraseña: cualquiera con el link puede verla y modificar tu cartera. "
+                       "Agrega `password = \"...\"` en los Secrets de Streamlit Cloud.")
 
 
 # ---------------------------------------------------------------------------
