@@ -71,6 +71,25 @@ def noticias(ticker, n=10):
     return out
 
 
+MACRO = {
+    "Tasa 10 años (%)": "^TNX",
+    "Petróleo WTI (USD)": "CL=F",
+    "VIX": "^VIX",
+    "Dólar DXY": "DX-Y.NYB",
+}
+
+
+def serie_diaria(simbolo, rango="5y"):
+    """Cierres diarios de un índice o futuro de Yahoo, indexados por fecha."""
+    r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{simbolo}",
+                     params={"range": rango, "interval": "1d"}, headers=HEADERS, timeout=20)
+    r.raise_for_status()
+    res = r.json()["chart"]["result"][0]
+    idx = pd.to_datetime(res["timestamp"], unit="s").normalize()
+    s = pd.Series(res["indicators"]["quote"][0]["close"], index=idx, dtype=float).dropna()
+    return s[~s.index.duplicated(keep="last")]
+
+
 def velas_1h(ticker):
     """Velas de 1 hora de los últimos 5 días hábiles, en hora de Nueva York."""
     r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",

@@ -592,6 +592,44 @@ def px_colores():
             "#6de0d8", "#d8e06d", "#f0a35e", "#8fa8ff", "#c9c9c9"]
 
 
+def grafico_riesgo_macro(od, macro, desde):
+    """Ofensivos/defensivos arriba y, debajo, una fila por variable macro (mismo eje de tiempo)."""
+    filas = 1 + len(macro)
+    fig = make_subplots(rows=filas, cols=1, shared_xaxes=True, vertical_spacing=0.03,
+                        row_heights=[0.32] + [0.68 / len(macro)] * len(macro) if macro else [1],
+                        subplot_titles=["Ofensivos / defensivos (base 100)"] + list(macro))
+    base = od[od.index >= desde]
+    serie = base / base.iloc[0] * 100
+    media = (od.rolling(50).mean() / base.iloc[0] * 100)[od.index >= desde]
+    fig.add_trace(go.Scatter(x=serie.index, y=serie, line=dict(color="#5ea8e6", width=1.8),
+                             name="Ofensivos / defensivos"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=media.index, y=media, line=dict(color="#8b93a3", width=1, dash="dot"),
+                             name="Promedio 50 días"), row=1, col=1)
+    fig.add_hline(y=100, line=dict(color="#2a2f3a", width=1), row=1, col=1)
+    colores = ["#e6b45e", "#b98af0", "#ef5a6f", "#3ecf8e"]
+    for i, (nombre, s) in enumerate(macro.items(), start=2):
+        s = s[s.index >= desde]
+        fig.add_trace(go.Scatter(x=s.index, y=s, line=dict(color=colores[(i - 2) % 4], width=1.4),
+                                 name=nombre), row=i, col=1)
+    fig.update_xaxes(range=[desde, max(od.index[-1], *(s.index[-1] for s in macro.values()))])
+    fig.update_annotations(font_size=12, x=0, xanchor="left")
+    fig.update_layout(height=260 + 150 * len(macro), template="plotly_dark", showlegend=False,
+                      margin=dict(t=30, b=10), hovermode="x unified")
+    return fig
+
+
+@st.cache_data(ttl=3600, show_spinner="Descargando tasas, petróleo, VIX y dólar...")
+def cargar_macro(version=""):
+    """{nombre: serie diaria} de las variables macro. Devuelve (series, errores)."""
+    series, errores = {}, []
+    for nombre, simbolo in opciones.MACRO.items():
+        try:
+            series[nombre] = opciones.serie_diaria(simbolo)
+        except Exception as e:
+            errores.append(f"{nombre}: {type(e).__name__}")
+    return series, ", ".join(errores)
+
+
 def grafico_calor(df, fecha, frecuencia, clave):
     """Sectores (filas) x últimos períodos (columnas)."""
     d = df.loc[:fecha].tail(N_CALOR)
@@ -783,6 +821,60 @@ elif vista == "Sectores":
     st.plotly_chart(grafico_calor(s[clave], fecha, frec, clave), width="stretch")
     st.caption(f"Últimos {N_CALOR} períodos hasta el elegido. Verde = el sector le ganó al mercado / ganó "
                "participación de volumen / subió la mayoría de sus empresas; rojo = lo contrario.")
+
+    # ---- riesgo vs refugio, momentum y macro (siempre con datos diarios) ----
+    st.divider()
+    st.header("Qué está moviendo la rotación")
+    ventana_m = st.radio("Ventana", ["6M", "1A", "2A", "5A"], index=1, horizontal=True, key="ventana_macro")
+    desde = pd.Timestamp.now().normalize() - pd.DateOffset(months={"6M": 6, "1A": 12, "2A": 24, "5A": 60}[ventana_m])
+    sd, _, _ = datos_sectores("Diaria", tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+    macro, err_m = cargar_macro(VERSION_OPCIONES)
+    if err_m:
+        st.caption(f"Algunas series macro no se pudieron cargar: {err_m}")
+
+    od = sectores.ofensivo_defensivo(sd["ret"])
+    m = st.columns(1 + len(macro))
+    od_v = od[od.index >= desde]
+    m[0].metric("Ofensivos / defensivos", f"{(od_v.iloc[-1] / od_v.iloc[0] - 1) * 100:+.1f}%",
+                f"{(od.iloc[-1] / od.iloc[-6] - 1) * 100:+.1f}% en 1 sem.",
+                help="Cuánto le han ganado los ofensivos a los defensivos en la ventana elegida.")
+    for col, (nombre, serie) in zip(m[1:], macro.items()):
+        cambio = (serie.iloc[-1] - serie.iloc[-6]) if nombre.startswith("Tasa") else \
+            (serie.iloc[-1] / serie.iloc[-6] - 1) * 100
+        col.metric(nombre, f"{serie.iloc[-1]:,.2f}",
+                   f"{cambio:+.2f} pp en 1 sem." if nombre.startswith("Tasa") else f"{cambio:+.1f}% en 1 sem.",
+                   delta_color="off")
+    st.plotly_chart(grafico_riesgo_macro(od, macro, desde), width="stretch")
+    st.caption(
+        f"**Ofensivos / defensivos** = {', '.join(sectores.OFENSIVOS)} contra "
+        f"{', '.join(sectores.DEFENSIVOS)} (pesos iguales), base 100 al inicio de la ventana. Sube = el mercado "
+        "busca riesgo; baja = busca refugio. Es la rotación más marcada en los datos: Tecnología y los "
+        "defensivos se mueven casi siempre en sentidos opuestos. La línea punteada es su promedio de 50 días. "
+        "Debajo, los motores macro: **tasa del bono a 10 años**, **petróleo WTI**, **VIX** (miedo esperado) y "
+        "**DXY** (fuerza del dólar).")
+
+    c_mom, c_sens = st.columns([2, 3])
+    with c_mom:
+        st.subheader("Momentum de los sectores")
+        mom_t = sectores.momentum(sd["rs"])
+        plazos = list(sectores.PLAZOS_MOMENTUM)
+        st.dataframe(mom_t.style.map(colorear_num, subset=plazos), hide_index=True, width="stretch",
+                     column_config={p: st.column_config.NumberColumn(format="%+.1f%%") for p in plazos})
+        st.caption("Cuánto le ganó (o perdió) cada sector al mercado en cada plazo. A un mes hay algo de "
+                   "persistencia: el sector que viene ganando tiende a seguir ganando un poco el mes siguiente. "
+                   "A una semana, no.")
+    with c_sens:
+        st.subheader("Sensibilidad a la macro")
+        if not macro:
+            st.caption("Sin series macro disponibles en este momento.")
+            st.stop()
+        sens = sectores.sensibilidad_macro(sd["rel"][sd["rel"].index >= desde],
+                                           {k: v[v.index >= desde - pd.Timedelta(days=10)] for k, v in macro.items()})
+        st.dataframe(sens.style.map(colorear_num).format("{:+.2f}"), width="stretch")
+        st.caption("Correlación entre el retorno semanal del sector **contra el mercado** y el cambio semanal de "
+                   "cada variable, en la ventana elegida (de −1 a +1). Ejemplo: positiva con la tasa = el sector "
+                   "le gana al mercado las semanas en que suben las tasas. Con ventanas cortas hay pocas semanas: "
+                   "léelo como una guía, no como algo exacto.")
 
 
 # ---------------------------------------------------------------------------

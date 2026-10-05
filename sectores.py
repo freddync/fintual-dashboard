@@ -135,3 +135,45 @@ def tabla(s, ratio, mom, fecha, frecuencia):
             "Relativo 3m %": (rs.iloc[i] / rs.iloc[i - m["3m"]] - 1) * 100 if i >= m["3m"] else None,
         })
     return pd.DataFrame(filas).sort_values("vs mercado (pp)", ascending=False).reset_index(drop=True)
+
+
+# ---------------------------------------------------------------------------
+# Riesgo vs refugio, momentum y factores macro
+# ---------------------------------------------------------------------------
+
+OFENSIVOS = ["Tecnología", "Industrial", "Materiales"]
+DEFENSIVOS = ["Consumo básico", "Servicios públicos", "Salud"]
+PLAZOS_MOMENTUM = {"1 mes": 21, "3 meses": 63, "6 meses": 126, "12 meses": 252}
+
+
+def ofensivo_defensivo(ret):
+    """Índice ofensivos / defensivos (pesos iguales) a partir de los retornos % por
+    sector. Sube = el mercado prefiere riesgo; baja = busca refugio."""
+    of = (1 + ret[[c for c in OFENSIVOS if c in ret]].mean(axis=1).fillna(0) / 100).cumprod()
+    de = (1 + ret[[c for c in DEFENSIVOS if c in ret]].mean(axis=1).fillna(0) / 100).cumprod()
+    return of / de
+
+
+def momentum(rs):
+    """Retorno relativo vs mercado (%) de cada sector en varios plazos, con datos diarios."""
+    filas = []
+    for sec in rs.columns:
+        r = rs[sec].dropna()
+        fila = {"Sector": sec}
+        for nombre, n in PLAZOS_MOMENTUM.items():
+            fila[nombre] = (r.iloc[-1] / r.iloc[-1 - n] - 1) * 100 if len(r) > n else None
+        filas.append(fila)
+    return pd.DataFrame(filas).sort_values("1 mes", ascending=False).reset_index(drop=True)
+
+
+def sensibilidad_macro(rel, macro):
+    """Correlación entre el retorno relativo semanal de cada sector y el cambio semanal
+    de cada variable macro (tasas en puntos, el resto en %)."""
+    rel_s = rel.resample("W-FRI").sum(min_count=1)
+    cambios = {}
+    for nombre, serie in macro.items():
+        w = serie.resample("W-FRI").last()
+        cambios[nombre] = w.diff() if nombre.startswith("Tasa") else w.pct_change(fill_method=None) * 100
+    cambios = pd.DataFrame(cambios)
+    datos = rel_s.join(cambios, how="inner").dropna()
+    return datos[list(rel.columns)].apply(lambda c: datos[list(macro)].corrwith(c)).T
