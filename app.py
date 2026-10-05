@@ -496,7 +496,7 @@ COLUMNAS = {
 }
 
 
-PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento", "Señales", "Hoy", "Mi cartera"]   # para el botón de volver
+PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento", "Señales", "Hoy"]   # para el botón de volver
 
 
 # Señales que se ordenan por su significado y no alfabéticamente
@@ -524,16 +524,19 @@ def ordenar(tabla, key):
     return tabla.sort_values(col, ascending=asc, na_position="last", kind="mergesort", key=clave)
 
 
-def mostrar_tabla(tabla, key, pestana, height=650):
+def mostrar_tabla(tabla, key, pestana, height=650, colorear=None):
     """Tabla ordenable; al marcar la casilla de una fila se abre esa empresa.
-    `pestana` (índice) queda anotada para que el botón de volver regrese a ella."""
+    La vista y la `pestana` (índice dentro de General) quedan anotadas para que el
+    botón de volver regrese a ellas. `colorear` = columnas en verde/rojo según su signo."""
     tabla = ordenar(tabla, key).reset_index(drop=True)
-    sel = st.dataframe(tabla, hide_index=True, width="stretch", height=height,
+    datos = tabla.style.map(colorear_num, subset=colorear) if colorear else tabla
+    sel = st.dataframe(datos, hide_index=True, width="stretch", height=height,
                        on_select="rerun", selection_mode="single-row", key=key,
                        column_config=COLUMNAS)
     if sel.selection.rows:
         st.session_state["_abrir"] = tabla.iloc[sel.selection.rows[0]]["Ticker"]
         st.session_state["_pestana_origen"] = pestana
+        st.session_state["_vista_origen"] = st.session_state.get("vista", "General")
         del st.session_state[key]   # limpia la selección para la vuelta
         st.rerun()
 
@@ -767,11 +770,12 @@ if "_abrir" in st.session_state:
     st.session_state["vista"] = "Empresa"
     st.session_state["ticker"] = st.session_state.pop("_abrir")
 if st.session_state.pop("_volver", False):
-    st.session_state["vista"] = "General"
-    st.session_state["_ir_a_pestana"] = st.session_state.get("_pestana_origen", 0)
+    st.session_state["vista"] = st.session_state.get("_vista_origen", "General")
+    if st.session_state["vista"] == "General":
+        st.session_state["_ir_a_pestana"] = st.session_state.get("_pestana_origen", 0)
 
 st.sidebar.title("📈 Fintual")
-vista = st.sidebar.radio("Vista", ["General", "Sectores", "Backtest", "Empresa"], horizontal=True, key="vista")
+vista = st.sidebar.radio("Vista", ["General", "Sectores", "Mi cartera", "Empresa"], horizontal=True, key="vista")
 universos = sorted(data["Universo"].unique())
 sel_uni = st.sidebar.multiselect("Universo", universos, default=universos)
 sector = st.sidebar.selectbox("Sector", ["Todos"] + sorted(data["Sector"].unique()))
@@ -798,14 +802,14 @@ if vista == "General":
                f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}: **Cruce alcista** = el MACD cruzó sobre su señal en la última sesión con ambas líneas bajo cero · **Pre-cruce** = histograma negativo pero subiendo, también con ambas bajo cero.")
 
     sobreventa = filtrado[filtrado[COL_RSI] < RSI_BAJO]
-    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento", "🎯 Señales", "🛒 Hoy", "💼 Mi cartera"]
+    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento", "🎯 Señales", "🛒 Hoy"]
     # al volver desde una empresa se abre la pestaña de donde se vino
     destino = st.session_state.pop("_ir_a_pestana", None)
     if destino is not None:
         st.session_state["pestanas"] = etiquetas[destino]
     if st.session_state.get("pestanas") not in etiquetas:   # el conteo del título cambió
         st.session_state.pop("pestanas", None)
-    tab_todas, tab_rsi, tab_seg, tab_sen, tab_hoy, tab_cart = st.tabs(etiquetas, key="pestanas", on_change="rerun")
+    tab_todas, tab_rsi, tab_seg, tab_sen, tab_hoy = st.tabs(etiquetas, key="pestanas", on_change="rerun")
 
     with tab_todas:
         mostrar_tabla(filtrado, "tabla_general", 0)
@@ -955,139 +959,149 @@ if vista == "General":
                     st.caption(f"Posiciones de la regla cuyo {COL_RSI} cerró sobre {RSI_ALTO}: la venta se hace en "
                                "la apertura siguiente. Solo aplica si compraste esa posición siguiendo la regla.")
 
-    with tab_cart:
-        cart = leer_cartera()
-        precios_hoy = data.set_index("Ticker")
 
-        # ---- tu umbral de venta (se guarda) ----
-        u1, u2 = st.columns([2, 5], vertical_alignment="bottom")
-        umbral_cart = u1.radio(f"Tu señal de venta: {COL_RSI} >", UMBRALES_VENTA,
-                               index=UMBRALES_VENTA.index(cart["umbral"]) if cart["umbral"] in UMBRALES_VENTA else 1,
-                               horizontal=True, key="umbral_cartera")
-        if umbral_cart != cart["umbral"]:
-            cart["umbral"] = umbral_cart
-            guardar_cartera(cart)
-            st.rerun()
-        u2.caption(f"En el backtest, {COL_RSI} > 60 fue la salida más eficiente por día, > 70 el mejor equilibrio "
-                   "y > 80 la de mayor ganancia por operación (pero con el dinero más tiempo invertido).")
+# ---------------------------------------------------------------------------
+# Vista mi cartera
+# ---------------------------------------------------------------------------
 
-        # ---- posiciones abiertas ----
-        if not cart["posiciones"]:
-            st.info("Todavía no registras compras. Agrégalas abajo, en **Registrar una compra**.")
-        else:
-            filas_c = []
-            for pos in cart["posiciones"]:
-                t = pos["ticker"]
-                act = precios_hoy["Precio"].get(t, np.nan)
-                rsi_t = precios_hoy[COL_RSI].get(t, np.nan)
-                invertido = pos["cantidad"] * pos["precio"]
-                valor = pos["cantidad"] * act
-                cruzados = [u for u in UMBRALES_VENTA if pd.notna(rsi_t) and rsi_t > u]
-                if pd.notna(rsi_t) and rsi_t > umbral_cart:
-                    senal = f"🔴 VENDER ({COL_RSI} > {umbral_cart})"
-                elif cruzados:
-                    senal = f"🟠 {COL_RSI} > {max(cruzados)} (tu umbral es {umbral_cart})"
+elif vista == "Mi cartera":
+    st.title("Mi cartera")
+    st.caption("Las acciones que compraste, con su ganancia y una señal de venta cuando el RSI supera tu "
+               "umbral.")
+    cart = leer_cartera()
+    precios_hoy = data.set_index("Ticker")
+
+    # ---- tu umbral de venta (se guarda) ----
+    u1, u2 = st.columns([2, 5], vertical_alignment="bottom")
+    umbral_cart = u1.radio(f"Tu señal de venta: {COL_RSI} >", UMBRALES_VENTA,
+                           index=UMBRALES_VENTA.index(cart["umbral"]) if cart["umbral"] in UMBRALES_VENTA else 1,
+                           horizontal=True, key="umbral_cartera")
+    if umbral_cart != cart["umbral"]:
+        cart["umbral"] = umbral_cart
+        guardar_cartera(cart)
+        st.rerun()
+    u2.caption(f"En el backtest, {COL_RSI} > 60 fue la salida más eficiente por día, > 70 el mejor equilibrio "
+               "y > 80 la de mayor ganancia por operación (pero con el dinero más tiempo invertido).")
+
+    # ---- posiciones abiertas ----
+    if not cart["posiciones"]:
+        st.info("Todavía no registras compras. Agrégalas abajo, en **Registrar una compra**.")
+    else:
+        filas_c = []
+        for pos in cart["posiciones"]:
+            t = pos["ticker"]
+            act = precios_hoy["Precio"].get(t, np.nan)
+            rsi_t = precios_hoy[COL_RSI].get(t, np.nan)
+            invertido = pos["cantidad"] * pos["precio"]
+            valor = pos["cantidad"] * act
+            cruzados = [u for u in UMBRALES_VENTA if pd.notna(rsi_t) and rsi_t > u]
+            if pd.notna(rsi_t) and rsi_t > umbral_cart:
+                senal = f"🔴 VENDER ({COL_RSI} > {umbral_cart})"
+            elif cruzados:
+                senal = f"🟠 {COL_RSI} > {max(cruzados)} (tu umbral es {umbral_cart})"
+            else:
+                senal = "🟢 Mantener"
+            filas_c.append({
+                "Ticker": t, "Nombre": precios_hoy["Nombre"].get(t, t),
+                "Señal de venta": senal, COL_RSI: rsi_t,
+                "Fecha compra": pd.Timestamp(pos["fecha"]),
+                "Días": (pd.Timestamp.now().normalize() - pd.Timestamp(pos["fecha"])).days,
+                "Cantidad": pos["cantidad"], "Precio compra": pos["precio"], "Precio actual": act,
+                "Invertido": invertido, "Valor actual": valor,
+                "Ganancia $": valor - invertido, "Ganancia %": (act / pos["precio"] - 1) * 100,
+                "Señal MACD": precios_hoy["Señal MACD"].get(t, ""),
+            })
+        tc = pd.DataFrame(filas_c)
+        vender_ya = tc["Señal de venta"].str.startswith("🔴")
+        if vender_ya.any():
+            st.error(f"**Señal de venta en {vender_ya.sum()} posición(es):** "
+                     + ", ".join(tc.loc[vender_ya, "Ticker"]) +
+                     f". Su {COL_RSI} cerró sobre {umbral_cart}; según la regla del backtest, la venta sería en "
+                     "la próxima apertura.")
+        k = st.columns(4)
+        inv, val = tc["Invertido"].sum(), tc["Valor actual"].sum()
+        k[0].metric("Posiciones abiertas", f"{len(tc)}")
+        k[1].metric("Invertido", f"${inv:,.2f}")
+        k[2].metric("Valor actual", f"${val:,.2f}", f"{(val / inv - 1) * 100:+.2f}%" if inv else None)
+        k[3].metric("Ganancia no realizada", f"${val - inv:+,.2f}")
+        mostrar_tabla(tc, "tabla_cartera", 0, height=min(450, 38 + 35 * len(tc)),
+                  colorear=["Ganancia $", "Ganancia %"])
+        st.caption(f"**Precio actual** y **{COL_RSI}** = último dato de la actualización automática (se refresca "
+                   "cada hora en horario de mercado; durante la sesión la barra del día es parcial). 🔴 = el RSI "
+                   f"superó tu umbral · 🟠 = superó otro de los umbrales ({', '.join(map(str, UMBRALES_VENTA))}) "
+                   "pero no el tuyo. Montos en la moneda en que registraste el precio.")
+
+    # ---- registrar una compra ----
+    with st.expander("➕ Registrar una compra", expanded=not cart["posiciones"]):
+        with st.form("nueva_compra", clear_on_submit=True):
+            f1, f2, f3, f4 = st.columns(4)
+            t_new = f1.selectbox("Ticker", sorted(data["Ticker"]), index=None, placeholder="Escribe un ticker...")
+            fecha_new = f2.date_input("Fecha de compra", datetime.date.today())
+            cant_new = f3.number_input("Cantidad (acciones)", min_value=0.0, value=None, step=1.0,
+                                       format="%.9f", help="Acepta fracciones de acción, hasta 9 decimales.")
+            precio_new = f4.number_input("Precio de compra", min_value=0.0, value=None, step=0.01, format="%.4f")
+            if st.form_submit_button("Guardar compra"):
+                if not t_new or not cant_new or not precio_new or cant_new <= 0 or precio_new <= 0:
+                    st.error("Completa el ticker, una cantidad mayor a 0 y el precio de compra.")
                 else:
-                    senal = "🟢 Mantener"
-                filas_c.append({
-                    "Ticker": t, "Nombre": precios_hoy["Nombre"].get(t, t),
-                    "Señal de venta": senal, COL_RSI: rsi_t,
-                    "Fecha compra": pd.Timestamp(pos["fecha"]),
-                    "Días": (pd.Timestamp.now().normalize() - pd.Timestamp(pos["fecha"])).days,
-                    "Cantidad": pos["cantidad"], "Precio compra": pos["precio"], "Precio actual": act,
-                    "Invertido": invertido, "Valor actual": valor,
-                    "Ganancia $": valor - invertido, "Ganancia %": (act / pos["precio"] - 1) * 100,
-                    "Señal MACD": precios_hoy["Señal MACD"].get(t, ""),
-                })
-            tc = pd.DataFrame(filas_c)
-            vender_ya = tc["Señal de venta"].str.startswith("🔴")
-            if vender_ya.any():
-                st.error(f"**Señal de venta en {vender_ya.sum()} posición(es):** "
-                         + ", ".join(tc.loc[vender_ya, "Ticker"]) +
-                         f". Su {COL_RSI} cerró sobre {umbral_cart}; según la regla del backtest, la venta sería en "
-                         "la próxima apertura.")
-            k = st.columns(4)
-            inv, val = tc["Invertido"].sum(), tc["Valor actual"].sum()
-            k[0].metric("Posiciones abiertas", f"{len(tc)}")
-            k[1].metric("Invertido", f"${inv:,.2f}")
-            k[2].metric("Valor actual", f"${val:,.2f}", f"{(val / inv - 1) * 100:+.2f}%" if inv else None)
-            k[3].metric("Ganancia no realizada", f"${val - inv:+,.2f}")
-            mostrar_tabla(tc, "tabla_cartera", 5, height=min(450, 38 + 35 * len(tc)))
-            st.caption(f"**Precio actual** y **{COL_RSI}** = último dato de la actualización automática (se refresca "
-                       "cada hora en horario de mercado; durante la sesión la barra del día es parcial). 🔴 = el RSI "
-                       f"superó tu umbral · 🟠 = superó otro de los umbrales ({', '.join(map(str, UMBRALES_VENTA))}) "
-                       "pero no el tuyo. Montos en la moneda en que registraste el precio.")
-
-        # ---- registrar una compra ----
-        with st.expander("➕ Registrar una compra", expanded=not cart["posiciones"]):
-            with st.form("nueva_compra", clear_on_submit=True):
-                f1, f2, f3, f4 = st.columns(4)
-                t_new = f1.selectbox("Ticker", sorted(data["Ticker"]), index=None, placeholder="Escribe un ticker...")
-                fecha_new = f2.date_input("Fecha de compra", datetime.date.today())
-                cant_new = f3.number_input("Cantidad (acciones)", min_value=0.0, value=0.0, step=1.0,
-                                           format="%.9f", help="Acepta fracciones de acción, hasta 9 decimales.")
-                precio_new = f4.number_input("Precio de compra", min_value=0.0, value=0.0, step=0.01, format="%.4f")
-                if st.form_submit_button("Guardar compra"):
-                    if not t_new or cant_new <= 0 or precio_new <= 0:
-                        st.error("Completa el ticker, una cantidad mayor a 0 y el precio de compra.")
-                    else:
-                        cart["posiciones"].append({
-                            "id": datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
-                            "ticker": t_new, "fecha": fecha_new.isoformat(),
-                            "cantidad": float(cant_new), "precio": float(precio_new)})
-                        guardar_cartera(cart)
-                        st.rerun()
-
-        # ---- registrar una venta / eliminar ----
-        if cart["posiciones"]:
-            with st.expander("➖ Registrar una venta o eliminar un registro"):
-                etiqueta_pos = {p_["id"]: f"{p_['ticker']} · {fmt_cantidad(p_['cantidad'])} acc. a {p_['precio']:,.2f} "
-                                          f"({p_['fecha']})" for p_ in cart["posiciones"]}
-                sel_id = st.selectbox("Posición", list(etiqueta_pos), format_func=etiqueta_pos.get)
-                pos_sel = next(p_ for p_ in cart["posiciones"] if p_["id"] == sel_id)
-                with st.form("venta"):
-                    v1, v2 = st.columns(2)
-                    precio_v = v1.number_input("Precio de venta", min_value=0.0, step=0.01, format="%.4f",
-                                               value=float(precios_hoy["Precio"].get(pos_sel["ticker"], 0) or 0))
-                    fecha_v = v2.date_input("Fecha de venta", datetime.date.today())
-                    b1, b2 = st.columns(2)
-                    vendida = b1.form_submit_button("Registrar venta")
-                    borrar = b2.form_submit_button("Eliminar (fue un error)")
-                if vendida and precio_v > 0:
-                    cart["posiciones"] = [p_ for p_ in cart["posiciones"] if p_["id"] != sel_id]
-                    cart["vendidas"].append({**pos_sel, "precio_venta": float(precio_v),
-                                             "fecha_venta": fecha_v.isoformat()})
-                    guardar_cartera(cart)
-                    st.rerun()
-                if borrar:
-                    cart["posiciones"] = [p_ for p_ in cart["posiciones"] if p_["id"] != sel_id]
+                    cart["posiciones"].append({
+                        "id": datetime.datetime.now().strftime("%Y%m%d%H%M%S%f"),
+                        "ticker": t_new, "fecha": fecha_new.isoformat(),
+                        "cantidad": float(cant_new), "precio": float(precio_new)})
                     guardar_cartera(cart)
                     st.rerun()
 
-        # ---- historial de ventas ----
-        if cart["vendidas"]:
-            st.subheader("Historial de ventas")
-            hv = pd.DataFrame([{
-                "Ticker": v["ticker"], "Nombre": precios_hoy["Nombre"].get(v["ticker"], v["ticker"]),
-                "Fecha compra": pd.Timestamp(v["fecha"]), "Fecha venta": pd.Timestamp(v["fecha_venta"]),
-                "Días": (pd.Timestamp(v["fecha_venta"]) - pd.Timestamp(v["fecha"])).days,
-                "Cantidad": v["cantidad"], "Precio compra": v["precio"], "Precio venta": v["precio_venta"],
-                "Invertido": v["cantidad"] * v["precio"],
-                "Ganancia $": v["cantidad"] * (v["precio_venta"] - v["precio"]),
-                "Ganancia %": (v["precio_venta"] / v["precio"] - 1) * 100,
-            } for v in cart["vendidas"]]).sort_values("Fecha venta", ascending=False)
-            k = st.columns(3)
-            k[0].metric("Ventas", f"{len(hv)}", f"{(hv['Ganancia %'] > 0).mean() * 100:.0f}% con ganancia",
-                        delta_color="off")
-            k[1].metric("Ganancia realizada", f"${hv['Ganancia $'].sum():+,.2f}")
-            k[2].metric("Retorno prom. por venta", f"{hv['Ganancia %'].mean():+.2f}%")
-            st.dataframe(hv, hide_index=True, width="stretch", column_config=COLUMNAS)
+    # ---- registrar una venta / eliminar ----
+    if cart["posiciones"]:
+        with st.expander("➖ Registrar una venta o eliminar un registro"):
+            etiqueta_pos = {p_["id"]: f"{p_['ticker']} · {fmt_cantidad(p_['cantidad'])} acc. a {p_['precio']:,.2f} "
+                                      f"({p_['fecha']})" for p_ in cart["posiciones"]}
+            sel_id = st.selectbox("Posición", list(etiqueta_pos), format_func=etiqueta_pos.get)
+            pos_sel = next(p_ for p_ in cart["posiciones"] if p_["id"] == sel_id)
+            with st.form("venta"):
+                v1, v2 = st.columns(2)
+                precio_v = v1.number_input("Precio de venta", min_value=0.0, step=0.01, format="%.4f",
+                                           value=float(precios_hoy["Precio"].get(pos_sel["ticker"], 0) or 0))
+                fecha_v = v2.date_input("Fecha de venta", datetime.date.today())
+                b1, b2 = st.columns(2)
+                vendida = b1.form_submit_button("Registrar venta")
+                borrar = b2.form_submit_button("Eliminar (fue un error)")
+            if vendida and precio_v > 0:
+                cart["posiciones"] = [p_ for p_ in cart["posiciones"] if p_["id"] != sel_id]
+                cart["vendidas"].append({**pos_sel, "precio_venta": float(precio_v),
+                                         "fecha_venta": fecha_v.isoformat()})
+                guardar_cartera(cart)
+                st.rerun()
+            if borrar:
+                cart["posiciones"] = [p_ for p_ in cart["posiciones"] if p_["id"] != sel_id]
+                guardar_cartera(cart)
+                st.rerun()
 
-        if config_gist()[0]:
-            st.caption("✅ Tu cartera se guarda en tu GitHub Gist privado: se mantiene entre sesiones y dispositivos.")
-        else:
-            st.caption("⚠️ Guardada en data/cartera.json (archivo local). En Streamlit Cloud se pierde al "
-                       "redeployar: configura los secrets [seguimiento] gist_id y token.")
+    # ---- historial de ventas ----
+    if cart["vendidas"]:
+        st.subheader("Historial de ventas")
+        hv = pd.DataFrame([{
+            "Ticker": v["ticker"], "Nombre": precios_hoy["Nombre"].get(v["ticker"], v["ticker"]),
+            "Fecha compra": pd.Timestamp(v["fecha"]), "Fecha venta": pd.Timestamp(v["fecha_venta"]),
+            "Días": (pd.Timestamp(v["fecha_venta"]) - pd.Timestamp(v["fecha"])).days,
+            "Cantidad": v["cantidad"], "Precio compra": v["precio"], "Precio venta": v["precio_venta"],
+            "Invertido": v["cantidad"] * v["precio"],
+            "Ganancia $": v["cantidad"] * (v["precio_venta"] - v["precio"]),
+            "Ganancia %": (v["precio_venta"] / v["precio"] - 1) * 100,
+        } for v in cart["vendidas"]]).sort_values("Fecha venta", ascending=False)
+        k = st.columns(3)
+        k[0].metric("Ventas", f"{len(hv)}", f"{(hv['Ganancia %'] > 0).mean() * 100:.0f}% con ganancia",
+                    delta_color="off")
+        k[1].metric("Ganancia realizada", f"${hv['Ganancia $'].sum():+,.2f}")
+        k[2].metric("Retorno prom. por venta", f"{hv['Ganancia %'].mean():+.2f}%")
+        st.dataframe(hv.style.map(colorear_num, subset=["Ganancia $", "Ganancia %"]), hide_index=True,
+                 width="stretch", column_config=COLUMNAS)
+
+    if config_gist()[0]:
+        st.caption("✅ Tu cartera se guarda en tu GitHub Gist privado: se mantiene entre sesiones y dispositivos.")
+    else:
+        st.caption("⚠️ Guardada en data/cartera.json (archivo local). En Streamlit Cloud se pierde al "
+                   "redeployar: configura los secrets [seguimiento] gist_id y token.")
 
 
 # ---------------------------------------------------------------------------
@@ -1217,196 +1231,6 @@ elif vista == "Sectores":
 
 
 # ---------------------------------------------------------------------------
-# Vista backtest
-# ---------------------------------------------------------------------------
-
-elif vista == "Backtest":
-    st.title("Backtest")
-    st.caption(f"Regla por empresa: **comprar** y **vender** según las señales elegidas. Ambas órdenes se ejecutan en la apertura del día siguiente (sin "
-               "mirar el futuro), una posición por empresa a la vez. Usa el universo y el sector elegidos a la "
-               f"izquierda. **Golden cross por abajo** = la línea MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL} "
-               "cruza sobre su señal con ambas líneas bajo cero.")
-    entrada = st.selectbox("Señal de compra", list(backtest.ENTRADAS),
-                           index=list(backtest.ENTRADAS).index("macd_y_rsi"),
-                           format_func=lambda e: backtest.ENTRADAS[e].replace("umbral", f"{COL_RSI} umbral"))
-    salida = st.selectbox("Señal de venta", list(backtest.SALIDAS),
-                          format_func=lambda e: backtest.SALIDAS[e].replace("umbral", f"{COL_RSI} umbral"),
-                          help="Death cross = la línea MACD cruza bajo su señal (el opuesto del golden cross).")
-    p1, p2, p3, p4 = st.columns(4)
-    umbral_c = p1.number_input(f"Umbral de compra ({COL_RSI} <)", 5, 50, RSI_BAJO, step=5,
-                               disabled=entrada == "macd")
-    umbral_v = p2.number_input(f"Umbral de venta ({COL_RSI} >)", 50, 95, RSI_ALTO, step=5,
-                               disabled=salida in ("macd", "macd_arriba"))
-    ventana = p3.number_input("Días hacia atrás para el RSI", 1, 30, 10, disabled=entrada != "macd_tras_rsi",
-                              help="Para 'luego de un RSI < umbral': cuántos días antes del cruce puede haber "
-                                   "ocurrido el RSI bajo el umbral (incluye el día del cruce).")
-    costo = p4.number_input("Costo por operación (%)", 0.0, 2.0, 0.1, step=0.05, format="%.2f",
-                            help="Comisiones + spread, ida y vuelta. Se descuenta de cada operación.")
-    acotar = st.toggle("Acotar casos extremos a ±30%", value=True,
-                       help="Una sola acción que sube 1.000% (ej. BMNR en 2025) puede inflar todos los promedios. "
-                            "Con esto activado, el retorno y el exceso de cada operación se limitan a ±30%.")
-
-    def preparar(o):
-        o = o[o["Sector"] == sector] if sector != "Todos" else o
-        return backtest.acotar(o) if acotar and not o.empty else o
-
-    ops = correr_backtest(umbral_c, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
-                          VERSION_OPCIONES, entrada, ventana, salida)
-
-    if st.toggle("Comparar señales de venta (misma compra)", value=False,
-                 help="Corre la compra elegida con cada regla de venta. La primera vez tarda ~30 segundos."):
-        comp_v = {}
-        for sal, v in [("rsi", 60), ("rsi", 70), ("rsi", 80), ("macd", 0), ("macd_arriba", 0),
-                       ("macd_y_rsi", 60), ("macd_y_rsi", 70), ("rsi_o_macd", 70)]:
-            o = preparar(correr_backtest(umbral_c, v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
-                                         VERSION_OPCIONES, entrada, ventana, sal))
-            if not o.empty:
-                fila = backtest.resumen(o)
-                fila["Abiertas hoy"] = int(o["Abierta"].sum())
-                comp_v[backtest.SALIDAS[sal].replace("umbral", str(v))] = fila
-        st.dataframe(pd.DataFrame(comp_v).T, width="stretch", column_config={
-            "Operaciones": st.column_config.NumberColumn(format="%d"),
-            "Abiertas hoy": st.column_config.NumberColumn(format="%d"),
-            "% ganadoras": st.column_config.NumberColumn(format="%.1f%%"),
-            "% le gana a la base": st.column_config.NumberColumn(format="%.1f%%"),
-            **{c: st.column_config.NumberColumn(format="%+.2f%%") for c in
-               ["Retorno prom. %", "Retorno mediano %", "Base prom. %", "Exceso prom. %", "Peor %"]},
-            **{c: st.column_config.NumberColumn(format="%+.3f%%") for c in
-               ["Retorno por día %", "Exceso por día %"]},
-            "Días prom.": st.column_config.NumberColumn(format="%.1f"),
-            "Factor de ganancia": st.column_config.NumberColumn(format="%.2f")})
-        st.caption("**Retorno / exceso por día** = suma de los retornos dividida por la suma de los días en "
-                   "posición: mide qué tan bien se usa el capital (una salida que espera más gana más por "
-                   "operación, pero inmoviliza el dinero más tiempo). **Abiertas hoy** = posiciones que siguen sin "
-                   "vender: si son muchas, las estadísticas de las cerradas están sesgadas hacia las ganadoras.")
-
-    if entrada != "macd":
-        with st.expander("Comparar umbrales de compra (RSI < 20, 30 y 40) por sector y por cuadrante"):
-            por_umbral = {}
-            for u in (20, 30, 40):
-                o = preparar(correr_backtest(u, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
-                                             VERSION_OPCIONES, entrada, ventana, salida))
-                if not o.empty:
-                    por_umbral[u] = o
-            fmt_cmp = {c: st.column_config.NumberColumn(format="%+.2f%%") for c in
-                       [f"Exceso % (RSI<{u})" for u in por_umbral]}
-            fmt_cmp.update({c: st.column_config.NumberColumn(format="%d") for c in
-                            [f"Operaciones (RSI<{u})" for u in por_umbral]})
-            st.markdown("**Total**")
-            st.dataframe(pd.DataFrame({u: backtest.resumen(o) for u, o in por_umbral.items()}).T
-                         .rename(index=lambda u: f"RSI < {u}"), width="stretch")
-            for por, titulo in [("Sector", "Por sector"), ("Cuadrante sector", "Por cuadrante del sector (RRG)")]:
-                st.markdown(f"**{titulo}**")
-                st.dataframe(backtest.comparar_umbrales(por_umbral, por), width="stretch", column_config=fmt_cmp)
-            st.caption("**Mejor umbral** = el de mayor exceso entre los que tienen al menos 30 operaciones. Ojo: "
-                       "elegir el mejor de cada grupo mirando los resultados sobreestima lo que rendiría a futuro; "
-                       "las diferencias entre umbrales dentro de un mismo sector suelen estar dentro del margen de "
-                       "error.")
-
-    with st.expander("Comparar todas las señales de compra (mismos umbrales y venta)"):
-        comp = {}
-        for e in backtest.ENTRADAS:
-            o = correr_backtest(umbral_c, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
-                                VERSION_OPCIONES, e, ventana, salida)
-            o = preparar(o)
-            if not o.empty:
-                comp[backtest.ENTRADAS[e]] = backtest.resumen(o)
-        st.dataframe(pd.DataFrame(comp).T, width="stretch", column_config={
-            "Operaciones": st.column_config.NumberColumn(format="%d"),
-            "% ganadoras": st.column_config.NumberColumn(format="%.1f%%"),
-            "% le gana a la base": st.column_config.NumberColumn(format="%.1f%%"),
-            **{c: st.column_config.NumberColumn(format="%+.2f%%") for c in
-               ["Retorno prom. %", "Retorno mediano %", "Base prom. %", "Exceso prom. %", "Peor %"]},
-            "Días prom.": st.column_config.NumberColumn(format="%.1f"),
-            "Factor de ganancia": st.column_config.NumberColumn(format="%.2f")})
-    ops = preparar(ops)
-    if ops.empty:
-        st.info("No hay operaciones con estos parámetros.")
-        st.stop()
-
-    tot = backtest.resumen(ops)
-    k = st.columns(6)
-    k[0].metric("Operaciones cerradas", f"{tot['Operaciones']:,.0f}")
-    k[1].metric("% ganadoras", f"{tot['% ganadoras']:.1f}%")
-    k[2].metric("Retorno prom.", f"{tot['Retorno prom. %']:+.2f}%")
-    k[3].metric("Exceso vs base", f"{tot['Exceso prom. %']:+.2f}%",
-                help="Retorno de la operación menos lo que la misma acción rinde en promedio en cualquier "
-                     "período de igual largo. Es lo que realmente aporta la señal.")
-    k[4].metric("Días prom.", f"{tot['Días prom.']:.0f}")
-    k[5].metric("Factor de ganancia", f"{tot['Factor de ganancia']:.2f}",
-                help="Suma de las ganancias / suma de las pérdidas. Sobre 1 = gana más de lo que pierde.")
-    st.caption(f"Período: {ops['Entrada'].min():%d-%b-%Y} a {ops['Salida'].max():%d-%b-%Y}.")
-
-    st.subheader("¿Cuándo funciona mejor?")
-    agrupar = st.radio("Ver por", ["Año", "Sector", "Cuadrante del sector (RRG)", "Flujo de volumen del sector",
-                                   "Sector vs mercado (1 mes)", "Cuadrante × flujo"], horizontal=True)
-    ops = ops.assign(**{
-        "Año": ops["Entrada"].dt.year.astype(str),
-        "Cuadrante del sector (RRG)": ops["Cuadrante sector"],
-        "Flujo de volumen del sector": ops["Flujo sector"],
-        "Sector vs mercado (1 mes)": ops["Sector vs mercado 1m"],
-        "Cuadrante × flujo": ops["Cuadrante sector"] + " · " + ops["Flujo sector"],
-    })
-    tabla_g = backtest.resumen(ops, agrupar).reset_index()
-    if agrupar == "Año":
-        tabla_g = tabla_g.sort_values("Año")
-    fig_b = go.Figure(go.Bar(
-        x=tabla_g[agrupar], y=tabla_g["Exceso prom. %"],
-        marker_color=np.where(tabla_g["Exceso prom. %"] >= 0, "#3ecf8e", "#ef5a6f"),
-        text=[f"{v:+.2f}%<br>n={n:,.0f}" for v, n in zip(tabla_g["Exceso prom. %"], tabla_g["Operaciones"])],
-        textposition="outside"))
-    fig_b.update_layout(height=380, template="plotly_dark", margin=dict(t=30, b=10),
-                        yaxis_title="Exceso prom. vs base (%)")
-    st.plotly_chart(fig_b, width="stretch")
-    pct2 = st.column_config.NumberColumn(format="%+.2f%%")
-    st.dataframe(tabla_g, hide_index=True, width="stretch", column_config={
-        "Operaciones": st.column_config.NumberColumn(format="%d"),
-        "% ganadoras": st.column_config.NumberColumn(format="%.1f%%"),
-        "% le gana a la base": st.column_config.NumberColumn(format="%.1f%%"),
-        "Retorno prom. %": pct2, "Retorno mediano %": pct2, "Base prom. %": pct2, "Exceso prom. %": pct2,
-        "Peor %": pct2, "Días prom.": st.column_config.NumberColumn(format="%.1f"),
-        "Factor de ganancia": st.column_config.NumberColumn(format="%.2f")})
-    st.caption(
-        "**Cuadrante del sector** = dónde estaba el sector de la empresa en el gráfico de rotación (RRG diario) "
-        "el día de la señal · **Flujo de volumen** = si su participación en el volumen del mercado estaba sobre "
-        "(Entrando) o bajo (Saliendo) su promedio de 20 días · **Sector vs mercado** = si el sector le venía "
-        "ganando o perdiendo al mercado en el último mes. Grupos con pocas operaciones son poco confiables.")
-
-    st.subheader("Distribución de los retornos")
-    cerradas = ops[~ops["Abierta"]]
-    fig_h = go.Figure(go.Histogram(x=cerradas["Retorno %"].clip(-30, 30), nbinsx=60,
-                                   marker_color="#5ea8e6"))
-    fig_h.add_vline(x=0, line=dict(color="#8b93a3", dash="dash"))
-    fig_h.update_layout(height=300, template="plotly_dark", margin=dict(t=10, b=10),
-                        xaxis_title="Retorno por operación (%, acotado a ±30)", yaxis_title="Operaciones")
-    st.plotly_chart(fig_h, width="stretch")
-
-    st.subheader("Posiciones abiertas hoy (señales de compra vigentes)")
-    abiertas = ops[ops["Abierta"]].sort_values("Entrada", ascending=False)
-    st.dataframe(abiertas[["Ticker", "Sector", "Entrada", "Días", "Precio entrada", "Precio salida",
-                           "Retorno %", "Cuadrante sector", "Flujo sector"]]
-                 .rename(columns={"Precio salida": "Precio actual", "Retorno %": "Retorno actual %"}),
-                 hide_index=True, width="stretch", height=300, column_config={
-                     "Entrada": st.column_config.DateColumn(format="DD-MM-YYYY"),
-                     "Precio entrada": st.column_config.NumberColumn(format="%.2f"),
-                     "Precio actual": st.column_config.NumberColumn(format="%.2f"),
-                     "Retorno actual %": pct2})
-
-    with st.expander("Todas las operaciones"):
-        st.dataframe(ops.sort_values("Entrada", ascending=False)[
-            ["Ticker", "Sector", "Entrada", "Salida", "Días", "Retorno %", "Base %", "Exceso %",
-             "Cuadrante sector", "Flujo sector", "Abierta"]],
-            hide_index=True, width="stretch", height=400, column_config={
-                "Entrada": st.column_config.DateColumn(format="DD-MM-YYYY"),
-                "Salida": st.column_config.DateColumn(format="DD-MM-YYYY"),
-                "Retorno %": pct2, "Base %": pct2, "Exceso %": pct2})
-    st.caption(
-        "**Ojo con el sesgo de supervivencia:** el universo son las empresas que HOY valen más de $10B. Las "
-        "que cayeron fuerte y salieron del grupo no están, así que los resultados de comprar caídas se ven "
-        "mejores de lo que habrían sido en la práctica. Los resultados pasados no garantizan los futuros.")
-
-
-# ---------------------------------------------------------------------------
 # Vista empresa
 # ---------------------------------------------------------------------------
 
@@ -1421,7 +1245,8 @@ else:
     fila = data[data["Ticker"] == ticker].iloc[0]
     ci = info.get(ticker, {})
 
-    origen = PESTANAS[st.session_state.get("_pestana_origen", 0)]
+    origen = ("Mi cartera" if st.session_state.get("_vista_origen") == "Mi cartera"
+              else PESTANAS[st.session_state.get("_pestana_origen", 0)])
     if st.button(f"← Volver a {origen}"):
         st.session_state["_volver"] = True
         st.rerun()
