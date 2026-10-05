@@ -1003,12 +1003,12 @@ elif vista == "Mi cartera":
                 senal = "🟢 Mantener"
             filas_c.append({
                 "Ticker": t, "Nombre": precios_hoy["Nombre"].get(t, t),
+                "Ganancia $": valor - invertido, "Ganancia %": (act / pos["precio"] - 1) * 100,
                 "Señal de venta": senal, COL_RSI: rsi_t,
                 "Fecha compra": pd.Timestamp(pos["fecha"]),
                 "Días": (pd.Timestamp.now().normalize() - pd.Timestamp(pos["fecha"])).days,
                 "Cantidad": pos["cantidad"], "Precio compra": pos["precio"], "Precio actual": act,
                 "Invertido": invertido, "Valor actual": valor,
-                "Ganancia $": valor - invertido, "Ganancia %": (act / pos["precio"] - 1) * 100,
                 "Señal MACD": precios_hoy["Señal MACD"].get(t, ""),
             })
         tc = pd.DataFrame(filas_c)
@@ -1082,12 +1082,12 @@ elif vista == "Mi cartera":
         st.subheader("Historial de ventas")
         hv = pd.DataFrame([{
             "Ticker": v["ticker"], "Nombre": precios_hoy["Nombre"].get(v["ticker"], v["ticker"]),
+            "Ganancia $": v["cantidad"] * (v["precio_venta"] - v["precio"]),
+            "Ganancia %": (v["precio_venta"] / v["precio"] - 1) * 100,
             "Fecha compra": pd.Timestamp(v["fecha"]), "Fecha venta": pd.Timestamp(v["fecha_venta"]),
             "Días": (pd.Timestamp(v["fecha_venta"]) - pd.Timestamp(v["fecha"])).days,
             "Cantidad": v["cantidad"], "Precio compra": v["precio"], "Precio venta": v["precio_venta"],
             "Invertido": v["cantidad"] * v["precio"],
-            "Ganancia $": v["cantidad"] * (v["precio_venta"] - v["precio"]),
-            "Ganancia %": (v["precio_venta"] / v["precio"] - 1) * 100,
         } for v in cart["vendidas"]]).sort_values("Fecha venta", ascending=False)
         k = st.columns(3)
         k[0].metric("Ventas", f"{len(hv)}", f"{(hv['Ganancia %'] > 0).mean() * 100:.0f}% con ganancia",
