@@ -35,6 +35,14 @@ ENTRADAS = {
 }
 MACD = (6, 13, 5)   # igual que en el dashboard
 
+SALIDAS = {
+    "rsi": "RSI > umbral",
+    "macd": "MACD death cross (cualquier zona)",
+    "macd_arriba": "MACD death cross por arriba (ambas líneas sobre cero)",
+    "macd_y_rsi": "MACD death cross + RSI > umbral (mismo día)",
+    "rsi_o_macd": "RSI > umbral o MACD death cross (lo primero)",
+}
+
 
 def rsi(close, period):
     """RSI de Wilder (inicializado con media simple), igual que en el dashboard."""
@@ -52,15 +60,42 @@ def rsi(close, period):
     return out
 
 
-def golden_cross(cierre):
-    """True el día en que la línea MACD cruza sobre su señal con ambas bajo cero."""
+def _macd(cierre):
     rapida, lenta, sen = MACD
     c = pd.Series(cierre)
     linea = c.ewm(span=rapida, adjust=False).mean() - c.ewm(span=lenta, adjust=False).mean()
     senal = linea.ewm(span=sen, adjust=False).mean()
     hist = (linea - senal).to_numpy()
     prev = np.concatenate([[np.nan], hist[:-1]])
-    return (prev < 0) & (hist >= 0) & (linea.to_numpy() < 0) & (senal.to_numpy() < 0)
+    return linea.to_numpy(), senal.to_numpy(), hist, prev
+
+
+def golden_cross(cierre):
+    """True el día en que la línea MACD cruza sobre su señal con ambas bajo cero."""
+    linea, senal, hist, prev = _macd(cierre)
+    return (prev < 0) & (hist >= 0) & (linea < 0) & (senal < 0)
+
+
+def death_cross(cierre, arriba=False):
+    """True el día en que la línea MACD cruza bajo su señal (con `arriba`, solo si
+    ambas líneas están sobre cero)."""
+    linea, senal, hist, prev = _macd(cierre)
+    cruce = (prev >= 0) & (hist < 0)
+    return cruce & (linea > 0) & (senal > 0) if arriba else cruce
+
+
+def senal_venta(cierre, r, salida, venta):
+    """Arreglo booleano: en qué días (al cierre) se activa la venta."""
+    sobre = np.nan_to_num(r, nan=0) > venta
+    if salida == "rsi":
+        return sobre
+    if salida == "macd":
+        return death_cross(cierre)
+    if salida == "macd_arriba":
+        return death_cross(cierre, arriba=True)
+    if salida == "macd_y_rsi":
+        return death_cross(cierre) & sobre
+    return sobre | death_cross(cierre)          # rsi_o_macd
 
 
 def senal_compra(cierre, r, entrada, compra, ventana):
@@ -78,13 +113,15 @@ def senal_compra(cierre, r, entrada, compra, ventana):
     return golden & reciente
 
 
-def operaciones(ticker, df, periodo=5, compra=30, venta=70, costo=0.1, entrada="rsi", ventana=10):
+def operaciones(ticker, df, periodo=5, compra=30, venta=70, costo=0.1, entrada="rsi", ventana=10,
+                salida="rsi"):
     """Lista de operaciones de una empresa."""
     fechas = df["Date"].to_numpy()
     aper = df["Open"].to_numpy(dtype=float)
     cierre = df["Close"].to_numpy(dtype=float)
     r = rsi(cierre, periodo)
     comprar = senal_compra(cierre, r, entrada, compra, ventana)
+    vender = senal_venta(cierre, r, salida, venta)
     n = len(df)
     ops, i_ent = [], None
 
@@ -98,12 +135,12 @@ def operaciones(ticker, df, periodo=5, compra=30, venta=70, costo=0.1, entrada="
         if i_ent is None and comprar[t]:
             i_ent = t + 1                                    # entra en la apertura siguiente
             senal = t
-        elif i_ent is not None and r[t] > venta and t + 1 > i_ent:
+        elif i_ent is not None and vender[t] and t + 1 > i_ent:
             agregar(_op(ticker, fechas, aper, senal, i_ent, t + 1, aper[t + 1], costo, False), senal)
             i_ent = None
     if i_ent is not None and i_ent < n:                      # sigue abierta: al último cierre
         op = _op(ticker, fechas, aper, senal, i_ent, n - 1, cierre[-1], costo, True)
-        op["Venta pendiente"] = bool(r[-1] > venta)          # se vende en la próxima apertura
+        op["Venta pendiente"] = bool(vender[-1])             # se vende en la próxima apertura
         agregar(op, senal)
     elif i_ent is None and n and not np.isnan(r[-1]) and comprar[-1]:
         # señal en la última sesión: la compra sería en la próxima apertura
@@ -138,11 +175,12 @@ def base_por_dias(df, dias):
     return out
 
 
-def correr(precios, sector_de, periodo=5, compra=30, venta=70, costo=0.1, entrada="rsi", ventana=10):
+def correr(precios, sector_de, periodo=5, compra=30, venta=70, costo=0.1, entrada="rsi", ventana=10,
+           salida="rsi"):
     """Operaciones de todas las empresas, con su base y su sector."""
     filas = []
     for t, df in precios.items():
-        ops = operaciones(t, df, periodo, compra, venta, costo, entrada, ventana)
+        ops = operaciones(t, df, periodo, compra, venta, costo, entrada, ventana, salida)
         if not ops:
             continue
         base = base_por_dias(df, [o["Días"] for o in ops])
@@ -202,6 +240,8 @@ def resumen(ops, por=None):
             "Exceso prom. %": g["Exceso %"].mean(),
             "% le gana a la base": (g["Exceso %"] > 0).mean() * 100,
             "Días prom.": g["Días"].mean(),
+            "Retorno por día %": g["Retorno %"].sum() / max(g["Días"].clip(lower=1).sum(), 1),
+            "Exceso por día %": g["Exceso %"].sum() / max(g["Días"].clip(lower=1).sum(), 1),
             "Peor %": g["Retorno %"].min(),
             "Factor de ganancia": (g.loc[g["Retorno %"] > 0, "Retorno %"].sum()
                                    / max(-g.loc[g["Retorno %"] < 0, "Retorno %"].sum(), 1e-9)),

@@ -530,14 +530,15 @@ def datos_sectores(frecuencia, universos, _sello_key, version=""):
 
 
 @st.cache_data(show_spinner="Corriendo el backtest...")
-def correr_backtest(compra, venta, costo, universos, _sello_key, version="", entrada="rsi", ventana=10):
+def correr_backtest(compra, venta, costo, universos, _sello_key, version="", entrada="rsi", ventana=10,
+                    salida="rsi"):
     """Operaciones de la regla elegida en todas las empresas del universo, con el estado
     de su sector (RRG diario, flujo de volumen) el día de la señal."""
     info_ = cargar_info()
     precios = {t: df for t, i in info_.items()
                if i.get("universe") in universos and (df := cargar_precios(t)) is not None}
     ops = backtest.correr(precios, {t: info_[t].get("sector", "Sin clasificar") for t in precios},
-                          RSI_PERIOD, compra, venta, costo, entrada, ventana)
+                          RSI_PERIOD, compra, venta, costo, entrada, ventana, salida)
     if ops.empty:
         return ops
     s, ratio, mom = datos_sectores("Diaria", universos, _sello_key, version)
@@ -1054,18 +1055,21 @@ elif vista == "Sectores":
 
 elif vista == "Backtest":
     st.title("Backtest")
-    st.caption(f"Regla por empresa: **comprar** según la señal elegida y **vender** cuando el {COL_RSI} cierra "
-               "sobre el umbral de venta. Ambas órdenes se ejecutan en la apertura del día siguiente (sin "
+    st.caption(f"Regla por empresa: **comprar** y **vender** según las señales elegidas. Ambas órdenes se ejecutan en la apertura del día siguiente (sin "
                "mirar el futuro), una posición por empresa a la vez. Usa el universo y el sector elegidos a la "
                f"izquierda. **Golden cross por abajo** = la línea MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL} "
                "cruza sobre su señal con ambas líneas bajo cero.")
     entrada = st.selectbox("Señal de compra", list(backtest.ENTRADAS),
                            index=list(backtest.ENTRADAS).index("macd_y_rsi"),
                            format_func=lambda e: backtest.ENTRADAS[e].replace("umbral", f"{COL_RSI} umbral"))
+    salida = st.selectbox("Señal de venta", list(backtest.SALIDAS),
+                          format_func=lambda e: backtest.SALIDAS[e].replace("umbral", f"{COL_RSI} umbral"),
+                          help="Death cross = la línea MACD cruza bajo su señal (el opuesto del golden cross).")
     p1, p2, p3, p4 = st.columns(4)
     umbral_c = p1.number_input(f"Umbral de compra ({COL_RSI} <)", 5, 50, RSI_BAJO, step=5,
                                disabled=entrada == "macd")
-    umbral_v = p2.number_input(f"Vender si {COL_RSI} >", 50, 95, RSI_ALTO, step=5)
+    umbral_v = p2.number_input(f"Umbral de venta ({COL_RSI} >)", 50, 95, RSI_ALTO, step=5,
+                               disabled=salida in ("macd", "macd_arriba"))
     ventana = p3.number_input("Días hacia atrás para el RSI", 1, 30, 10, disabled=entrada != "macd_tras_rsi",
                               help="Para 'luego de un RSI < umbral': cuántos días antes del cruce puede haber "
                                    "ocurrido el RSI bajo el umbral (incluye el día del cruce).")
@@ -1080,14 +1084,41 @@ elif vista == "Backtest":
         return backtest.acotar(o) if acotar and not o.empty else o
 
     ops = correr_backtest(umbral_c, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
-                          VERSION_OPCIONES, entrada, ventana)
+                          VERSION_OPCIONES, entrada, ventana, salida)
+
+    if st.toggle("Comparar señales de venta (misma compra)", value=False,
+                 help="Corre la compra elegida con cada regla de venta. La primera vez tarda ~30 segundos."):
+        comp_v = {}
+        for sal, v in [("rsi", 60), ("rsi", 70), ("rsi", 80), ("macd", 0), ("macd_arriba", 0),
+                       ("macd_y_rsi", 60), ("macd_y_rsi", 70), ("rsi_o_macd", 70)]:
+            o = preparar(correr_backtest(umbral_c, v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
+                                         VERSION_OPCIONES, entrada, ventana, sal))
+            if not o.empty:
+                fila = backtest.resumen(o)
+                fila["Abiertas hoy"] = int(o["Abierta"].sum())
+                comp_v[backtest.SALIDAS[sal].replace("umbral", str(v))] = fila
+        st.dataframe(pd.DataFrame(comp_v).T, width="stretch", column_config={
+            "Operaciones": st.column_config.NumberColumn(format="%d"),
+            "Abiertas hoy": st.column_config.NumberColumn(format="%d"),
+            "% ganadoras": st.column_config.NumberColumn(format="%.1f%%"),
+            "% le gana a la base": st.column_config.NumberColumn(format="%.1f%%"),
+            **{c: st.column_config.NumberColumn(format="%+.2f%%") for c in
+               ["Retorno prom. %", "Retorno mediano %", "Base prom. %", "Exceso prom. %", "Peor %"]},
+            **{c: st.column_config.NumberColumn(format="%+.3f%%") for c in
+               ["Retorno por día %", "Exceso por día %"]},
+            "Días prom.": st.column_config.NumberColumn(format="%.1f"),
+            "Factor de ganancia": st.column_config.NumberColumn(format="%.2f")})
+        st.caption("**Retorno / exceso por día** = suma de los retornos dividida por la suma de los días en "
+                   "posición: mide qué tan bien se usa el capital (una salida que espera más gana más por "
+                   "operación, pero inmoviliza el dinero más tiempo). **Abiertas hoy** = posiciones que siguen sin "
+                   "vender: si son muchas, las estadísticas de las cerradas están sesgadas hacia las ganadoras.")
 
     if entrada != "macd":
         with st.expander("Comparar umbrales de compra (RSI < 20, 30 y 40) por sector y por cuadrante"):
             por_umbral = {}
             for u in (20, 30, 40):
                 o = preparar(correr_backtest(u, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
-                                             VERSION_OPCIONES, entrada, ventana))
+                                             VERSION_OPCIONES, entrada, ventana, salida))
                 if not o.empty:
                     por_umbral[u] = o
             fmt_cmp = {c: st.column_config.NumberColumn(format="%+.2f%%") for c in
@@ -1109,7 +1140,7 @@ elif vista == "Backtest":
         comp = {}
         for e in backtest.ENTRADAS:
             o = correr_backtest(umbral_c, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
-                                VERSION_OPCIONES, e, ventana)
+                                VERSION_OPCIONES, e, ventana, salida)
             o = preparar(o)
             if not o.empty:
                 comp[backtest.ENTRADAS[e]] = backtest.resumen(o)
