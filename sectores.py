@@ -98,6 +98,21 @@ def cuadrante(ratio, mom):
     return "Mejorando" if mom >= 100 else "Rezagado"
 
 
+def flujo(d_part):
+    """Entrando / Saliendo según el signo de la Δ participación del último período, y
+    cuántos períodos seguidos lleva así (un solo período puede ser ruido)."""
+    v = d_part.dropna()
+    if v.empty:
+        return {"Flujo": "Sin datos", "Racha": None}
+    signo = v.iloc[-1] > 0
+    racha = 0
+    for x in reversed(v.to_numpy()):
+        if (x > 0) != signo:
+            break
+        racha += 1
+    return {"Flujo": "Entrando" if signo else "Saliendo", "Racha": racha}
+
+
 def tabla(s, ratio, mom, fecha, frecuencia):
     """Resumen de todos los sectores en una fecha."""
     m = MOMENTUM[frecuencia]
@@ -114,6 +129,7 @@ def tabla(s, ratio, mom, fecha, frecuencia):
             "Vol. relativo": s["vol_rel"].at[fecha, sec],
             "Part. volumen %": s["part"].at[fecha, sec],
             "Δ participación (pp)": s["d_part"].at[fecha, sec],
+            **flujo(s["d_part"][sec].iloc[:i + 1]),
             "Relativo 1m %": (rs.iloc[i] / rs.iloc[i - m["1m"]] - 1) * 100 if i >= m["1m"] else None,
             "Relativo 3m %": (rs.iloc[i] / rs.iloc[i - m["3m"]] - 1) * 100 if i >= m["3m"] else None,
             "Cuadrante": cuadrante(ratio.at[fecha, sec], mom.at[fecha, sec]),

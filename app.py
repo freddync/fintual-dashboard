@@ -502,6 +502,8 @@ def mostrar_tabla(tabla, key, pestana, height=650):
 # ---------------------------------------------------------------------------
 
 N_CALOR = 20   # períodos del mapa de calor
+COLOR_FLUJO = {"Entrando": "#3ecf8e", "Saliendo": "#ef5a6f"}
+UNIDAD_FREC = {"Diaria": "días", "Semanal": "sem.", "Mensual": "meses"}
 COLOR_CUADRANTE = {"Liderando": "#3ecf8e", "Debilitándose": "#e6b45e",
                    "Rezagado": "#ef5a6f", "Mejorando": "#5ea8e6"}
 
@@ -739,7 +741,8 @@ elif vista == "Sectores":
     numericas = ["Retorno %", "vs mercado (pp)", "Δ participación (pp)", "Relativo 1m %", "Relativo 3m %"]
     st.dataframe(
         tb.style.map(colorear_num, subset=numericas)
-                .map(lambda v: f"color: {COLOR_CUADRANTE.get(v, '')}; font-weight: 600", subset=["Cuadrante"]),
+                .map(lambda v: f"color: {COLOR_CUADRANTE.get(v, '')}; font-weight: 600", subset=["Cuadrante"])
+                .map(lambda v: f"color: {COLOR_FLUJO.get(v, '')}; font-weight: 600", subset=["Flujo"]),
         hide_index=True, width="stretch", column_config={
             "Retorno %": st.column_config.NumberColumn(format="%+.2f%%"),
             "vs mercado (pp)": st.column_config.NumberColumn(format="%+.2f"),
@@ -747,6 +750,9 @@ elif vista == "Sectores":
             "Vol. relativo": st.column_config.NumberColumn(format="%.2fx"),
             "Part. volumen %": st.column_config.NumberColumn(format="%.1f%%"),
             "Δ participación (pp)": st.column_config.NumberColumn(format="%+.2f"),
+            "Racha": st.column_config.NumberColumn(
+                format=f"%d {UNIDAD_FREC[frec]}",
+                help="Períodos seguidos con el mismo flujo. Uno solo puede ser ruido; varios seguidos es más confiable."),
             "Relativo 1m %": st.column_config.NumberColumn(format="%+.1f%%"),
             "Relativo 3m %": st.column_config.NumberColumn(format="%+.1f%%"),
         })
@@ -755,7 +761,7 @@ elif vista == "Sectores":
         "sector que subió (amplitud) · **Vol. relativo** = volumen en dólares del período / su promedio de los "
         f"{sectores.VENTANA_VOL[frec]} anteriores · **Part. volumen** = parte del volumen en dólares del mercado que "
         "se transó en el sector · **Δ participación** = participación actual menos su promedio: positivo = "
-        "está entrando más dinero que lo habitual · **Relativo 1m/3m** = cuánto le ganó (o perdió) al "
+        "está entrando más dinero que lo habitual · **Flujo** = **Entrando** si la Δ participación es positiva, **Saliendo** si es negativa; la **Racha** dice cuántos períodos seguidos lleva así · **Relativo 1m/3m** = cuánto le ganó (o perdió) al "
         "mercado en ese plazo. Una rotación se ve como sectores con **vs mercado** y **Δ participación** "
         "positivos (entra dinero y suben más que el resto) mientras otros pierden ambas cosas.")
 
