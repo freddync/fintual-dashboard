@@ -129,9 +129,9 @@ def tabla(s, ratio, mom, fecha, frecuencia):
             "Vol. relativo": s["vol_rel"].at[fecha, sec],
             "Part. volumen %": s["part"].at[fecha, sec],
             "Δ participación (pp)": s["d_part"].at[fecha, sec],
+            "Cuadrante": cuadrante(ratio.at[fecha, sec], mom.at[fecha, sec]),
             **flujo(s["d_part"][sec].iloc[:i + 1]),
             "Relativo 1m %": (rs.iloc[i] / rs.iloc[i - m["1m"]] - 1) * 100 if i >= m["1m"] else None,
             "Relativo 3m %": (rs.iloc[i] / rs.iloc[i - m["3m"]] - 1) * 100 if i >= m["3m"] else None,
-            "Cuadrante": cuadrante(ratio.at[fecha, sec], mom.at[fecha, sec]),
         })
     return pd.DataFrame(filas).sort_values("vs mercado (pp)", ascending=False).reset_index(drop=True)
