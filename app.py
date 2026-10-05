@@ -443,10 +443,35 @@ COLUMNAS = {
 PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento"]   # para el botón de volver
 
 
+# Señales que se ordenan por su significado y no alfabéticamente
+ORDEN_SENAL = {
+    "Señal RSI": {"Sobreventa": 0, "Neutral": 1, "Sobrecompra": 2},
+    "Señal MACD": {"Bajista": 0, "Perdiendo fuerza": 1, "Pre-cruce": 2, "Alcista": 3},
+}
+SIN_ORDEN = "(sin orden)"
+
+
+def ordenar(tabla, key):
+    """Controles "Ordenar por" de una tabla. El orden elegido se guarda en una clave
+    propia de session_state: las claves de los widgets se borran cuando la tabla no
+    se dibuja (al abrir una empresa), y así el orden sobrevive a la ida y vuelta."""
+    guardado = st.session_state.setdefault(f"_orden_{key}", [SIN_ORDEN, False])
+    opciones_ = [SIN_ORDEN] + list(tabla.columns)
+    o1, o2, _ = st.columns([2, 1, 3], vertical_alignment="bottom")
+    col = o1.selectbox("Ordenar por", opciones_, key=f"w_col_{key}",
+                       index=opciones_.index(guardado[0]) if guardado[0] in opciones_ else 0)
+    asc = o2.toggle("Ascendente", value=guardado[1], key=f"w_asc_{key}")
+    st.session_state[f"_orden_{key}"] = [col, asc]
+    if col == SIN_ORDEN:
+        return tabla
+    clave = (lambda s: s.map(ORDEN_SENAL[col])) if col in ORDEN_SENAL else None
+    return tabla.sort_values(col, ascending=asc, na_position="last", kind="mergesort", key=clave)
+
+
 def mostrar_tabla(tabla, key, pestana, height=650):
     """Tabla ordenable; al marcar la casilla de una fila se abre esa empresa.
     `pestana` (índice) queda anotada para que el botón de volver regrese a ella."""
-    tabla = tabla.reset_index(drop=True)
+    tabla = ordenar(tabla, key).reset_index(drop=True)
     sel = st.dataframe(tabla, hide_index=True, width="stretch", height=height,
                        on_select="rerun", selection_mode="single-row", key=key,
                        column_config=COLUMNAS)
@@ -601,8 +626,9 @@ if sello:
 
 if vista == "General":
     st.title("Resumen general")
-    st.caption("Marca la casilla de una fila para abrir la empresa · click en el título de una columna "
-               f"para ordenar. {COL_RSI}: sobre {RSI_ALTO} = sobrecompra, bajo {RSI_BAJO} = sobreventa · "
+    st.caption("Marca la casilla de una fila para abrir la empresa · usa **Ordenar por** para que el orden "
+               "se mantenga al volver de una empresa (el click en el título de una columna también ordena, "
+               f"pero ese orden se pierde). {COL_RSI}: sobre {RSI_ALTO} = sobrecompra, bajo {RSI_BAJO} = sobreventa · "
                f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}: Pre-cruce = histograma negativo pero subiendo.")
 
     sobreventa = filtrado[filtrado[COL_RSI] < RSI_BAJO]
