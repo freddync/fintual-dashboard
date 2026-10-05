@@ -1,8 +1,14 @@
 """
 backtest.py
 -----------
-Backtest de una regla simple por empresa: comprar cuando el RSI cae bajo un
-umbral y vender cuando sube sobre otro.
+Backtest de reglas simples por empresa. Venta: cuando el RSI sube sobre un
+umbral. Compra, a elección (ver ENTRADAS):
+  rsi            RSI bajo el umbral de compra
+  macd           golden cross del MACD "por abajo": la línea MACD cruza sobre su
+                 señal con ambas líneas bajo cero
+  macd_y_rsi     golden cross y RSI bajo el umbral el MISMO día
+  macd_tras_rsi  golden cross con un RSI bajo el umbral en los últimos N días
+                 (incluido el día del cruce)
 
 Supuestos (para no mirar el futuro):
   - El RSI se calcula con el CIERRE del día t; la orden se ejecuta en la
@@ -21,6 +27,14 @@ MISMA acción rinde en promedio en cualquier ventana de igual cantidad de días
 import numpy as np
 import pandas as pd
 
+ENTRADAS = {
+    "rsi": "RSI < umbral",
+    "macd": "MACD golden cross por abajo",
+    "macd_y_rsi": "MACD golden cross + RSI < umbral (mismo día)",
+    "macd_tras_rsi": "MACD golden cross luego de un RSI < umbral",
+}
+MACD = (6, 13, 5)   # igual que en el dashboard
+
 
 def rsi(close, period):
     """RSI de Wilder (inicializado con media simple), igual que en el dashboard."""
@@ -38,18 +52,45 @@ def rsi(close, period):
     return out
 
 
-def operaciones(ticker, df, periodo=5, compra=30, venta=70, costo=0.1):
+def golden_cross(cierre):
+    """True el día en que la línea MACD cruza sobre su señal con ambas bajo cero."""
+    rapida, lenta, sen = MACD
+    c = pd.Series(cierre)
+    linea = c.ewm(span=rapida, adjust=False).mean() - c.ewm(span=lenta, adjust=False).mean()
+    senal = linea.ewm(span=sen, adjust=False).mean()
+    hist = (linea - senal).to_numpy()
+    prev = np.concatenate([[np.nan], hist[:-1]])
+    return (prev < 0) & (hist >= 0) & (linea.to_numpy() < 0) & (senal.to_numpy() < 0)
+
+
+def senal_compra(cierre, r, entrada, compra, ventana):
+    """Arreglo booleano: en qué días (al cierre) hay señal de compra."""
+    bajo = np.nan_to_num(r, nan=100) < compra
+    if entrada == "rsi":
+        return bajo
+    golden = golden_cross(cierre)
+    if entrada == "macd":
+        return golden
+    if entrada == "macd_y_rsi":
+        return golden & bajo
+    # macd_tras_rsi: hubo RSI bajo el umbral en los últimos `ventana` días
+    reciente = pd.Series(bajo).rolling(ventana + 1, min_periods=1).max().to_numpy() > 0
+    return golden & reciente
+
+
+def operaciones(ticker, df, periodo=5, compra=30, venta=70, costo=0.1, entrada="rsi", ventana=10):
     """Lista de operaciones de una empresa."""
     fechas = df["Date"].to_numpy()
     aper = df["Open"].to_numpy(dtype=float)
     cierre = df["Close"].to_numpy(dtype=float)
     r = rsi(cierre, periodo)
+    comprar = senal_compra(cierre, r, entrada, compra, ventana)
     n = len(df)
     ops, i_ent = [], None
     for t in range(n - 1):
         if np.isnan(r[t]):
             continue
-        if i_ent is None and r[t] < compra:
+        if i_ent is None and comprar[t]:
             i_ent = t + 1                                    # entra en la apertura siguiente
             senal = t
         elif i_ent is not None and r[t] > venta and t + 1 > i_ent:
@@ -85,11 +126,11 @@ def base_por_dias(df, dias):
     return out
 
 
-def correr(precios, sector_de, periodo=5, compra=30, venta=70, costo=0.1):
+def correr(precios, sector_de, periodo=5, compra=30, venta=70, costo=0.1, entrada="rsi", ventana=10):
     """Operaciones de todas las empresas, con su base y su sector."""
     filas = []
     for t, df in precios.items():
-        ops = operaciones(t, df, periodo, compra, venta, costo)
+        ops = operaciones(t, df, periodo, compra, venta, costo, entrada, ventana)
         if not ops:
             continue
         base = base_por_dias(df, [o["Días"] for o in ops])
