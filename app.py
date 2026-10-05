@@ -20,15 +20,18 @@ import hashlib
 import importlib
 
 import opciones
+import backtest
 import sectores
 
 # Streamlit Cloud, al recibir un push, vuelve a ejecutar app.py pero puede seguir
 # usando la versión anterior de los módulos que tenía en memoria
 importlib.reload(opciones)
 importlib.reload(sectores)
+importlib.reload(backtest)
 # cambia cuando cambia opciones.py: invalida lo cacheado con la versión anterior
 VERSION_OPCIONES = hashlib.md5(open(opciones.__file__, "rb").read()
-                               + open(sectores.__file__, "rb").read()).hexdigest()
+                               + open(sectores.__file__, "rb").read()
+                               + open(backtest.__file__, "rb").read()).hexdigest()
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 PRECIOS_DIR = os.path.join(DATA_DIR, "precios")
@@ -516,6 +519,21 @@ def datos_sectores(frecuencia, universos, _sello_key, version=""):
     return s, ratio, mom
 
 
+@st.cache_data(show_spinner="Corriendo el backtest...")
+def correr_backtest(compra, venta, costo, universos, _sello_key, version=""):
+    """Operaciones de la regla RSI en todas las empresas del universo, con el estado de
+    su sector (RRG diario, flujo de volumen) el día de la señal."""
+    info_ = cargar_info()
+    precios = {t: df for t, i in info_.items()
+               if i.get("universe") in universos and (df := cargar_precios(t)) is not None}
+    ops = backtest.correr(precios, {t: info_[t].get("sector", "Sin clasificar") for t in precios},
+                          RSI_PERIOD, compra, venta, costo)
+    if ops.empty:
+        return ops
+    s, ratio, mom = datos_sectores("Diaria", universos, _sello_key, version)
+    return backtest.agregar_sector(ops, s, ratio, mom)
+
+
 def periodo_en_curso(fecha, frecuencia):
     """¿El último período todavía no cierra? (hora de Nueva York, cierre ~16:15)."""
     ahora = datetime.datetime.now(ZoneInfo("America/New_York"))
@@ -617,7 +635,7 @@ if st.session_state.pop("_volver", False):
     st.session_state["_ir_a_pestana"] = st.session_state.get("_pestana_origen", 0)
 
 st.sidebar.title("📈 Fintual")
-vista = st.sidebar.radio("Vista", ["General", "Sectores", "Empresa"], horizontal=True, key="vista")
+vista = st.sidebar.radio("Vista", ["General", "Sectores", "Backtest", "Empresa"], horizontal=True, key="vista")
 universos = sorted(data["Universo"].unique())
 sel_uni = st.sidebar.multiselect("Universo", universos, default=universos)
 sector = st.sidebar.selectbox("Sector", ["Todos"] + sorted(data["Sector"].unique()))
@@ -759,6 +777,112 @@ elif vista == "Sectores":
     st.plotly_chart(grafico_calor(s[clave], fecha, frec, clave), width="stretch")
     st.caption(f"Últimos {N_CALOR} períodos hasta el elegido. Verde = el sector le ganó al mercado / ganó "
                "participación de volumen / subió la mayoría de sus empresas; rojo = lo contrario.")
+
+
+# ---------------------------------------------------------------------------
+# Vista backtest
+# ---------------------------------------------------------------------------
+
+elif vista == "Backtest":
+    st.title(f"Backtest: {COL_RSI}")
+    st.caption(f"Regla por empresa: **comprar** cuando el {COL_RSI} cierra bajo el umbral de compra y "
+               "**vender** cuando cierra sobre el de venta. Ambas órdenes se ejecutan en la apertura del día "
+               "siguiente (sin mirar el futuro), una posición por empresa a la vez. Usa el universo y el "
+               "sector elegidos a la izquierda.")
+    p1, p2, p3 = st.columns(3)
+    umbral_c = p1.number_input(f"Comprar si {COL_RSI} <", 5, 50, RSI_BAJO, step=5)
+    umbral_v = p2.number_input(f"Vender si {COL_RSI} >", 50, 95, RSI_ALTO, step=5)
+    costo = p3.number_input("Costo por operación (%)", 0.0, 2.0, 0.1, step=0.05, format="%.2f",
+                            help="Comisiones + spread, ida y vuelta. Se descuenta de cada operación.")
+
+    ops = correr_backtest(umbral_c, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
+                          VERSION_OPCIONES)
+    if sector != "Todos":
+        ops = ops[ops["Sector"] == sector]
+    if ops.empty:
+        st.info("No hay operaciones con estos parámetros.")
+        st.stop()
+
+    tot = backtest.resumen(ops)
+    k = st.columns(6)
+    k[0].metric("Operaciones cerradas", f"{tot['Operaciones']:,.0f}")
+    k[1].metric("% ganadoras", f"{tot['% ganadoras']:.1f}%")
+    k[2].metric("Retorno prom.", f"{tot['Retorno prom. %']:+.2f}%")
+    k[3].metric("Exceso vs base", f"{tot['Exceso prom. %']:+.2f}%",
+                help="Retorno de la operación menos lo que la misma acción rinde en promedio en cualquier "
+                     "período de igual largo. Es lo que realmente aporta la señal.")
+    k[4].metric("Días prom.", f"{tot['Días prom.']:.0f}")
+    k[5].metric("Factor de ganancia", f"{tot['Factor de ganancia']:.2f}",
+                help="Suma de las ganancias / suma de las pérdidas. Sobre 1 = gana más de lo que pierde.")
+    st.caption(f"Período: {ops['Entrada'].min():%d-%b-%Y} a {ops['Salida'].max():%d-%b-%Y}.")
+
+    st.subheader("¿Cuándo funciona mejor?")
+    agrupar = st.radio("Ver por", ["Año", "Sector", "Cuadrante del sector (RRG)", "Flujo de volumen del sector",
+                                   "Sector vs mercado (1 mes)", "Cuadrante × flujo"], horizontal=True)
+    ops = ops.assign(**{
+        "Año": ops["Entrada"].dt.year.astype(str),
+        "Cuadrante del sector (RRG)": ops["Cuadrante sector"],
+        "Flujo de volumen del sector": ops["Flujo sector"],
+        "Sector vs mercado (1 mes)": ops["Sector vs mercado 1m"],
+        "Cuadrante × flujo": ops["Cuadrante sector"] + " · " + ops["Flujo sector"],
+    })
+    tabla_g = backtest.resumen(ops, agrupar).reset_index()
+    if agrupar == "Año":
+        tabla_g = tabla_g.sort_values("Año")
+    fig_b = go.Figure(go.Bar(
+        x=tabla_g[agrupar], y=tabla_g["Exceso prom. %"],
+        marker_color=np.where(tabla_g["Exceso prom. %"] >= 0, "#3ecf8e", "#ef5a6f"),
+        text=[f"{v:+.2f}%<br>n={n:,.0f}" for v, n in zip(tabla_g["Exceso prom. %"], tabla_g["Operaciones"])],
+        textposition="outside"))
+    fig_b.update_layout(height=380, template="plotly_dark", margin=dict(t=30, b=10),
+                        yaxis_title="Exceso prom. vs base (%)")
+    st.plotly_chart(fig_b, width="stretch")
+    pct2 = st.column_config.NumberColumn(format="%+.2f%%")
+    st.dataframe(tabla_g, hide_index=True, width="stretch", column_config={
+        "Operaciones": st.column_config.NumberColumn(format="%d"),
+        "% ganadoras": st.column_config.NumberColumn(format="%.1f%%"),
+        "% le gana a la base": st.column_config.NumberColumn(format="%.1f%%"),
+        "Retorno prom. %": pct2, "Retorno mediano %": pct2, "Base prom. %": pct2, "Exceso prom. %": pct2,
+        "Peor %": pct2, "Días prom.": st.column_config.NumberColumn(format="%.1f"),
+        "Factor de ganancia": st.column_config.NumberColumn(format="%.2f")})
+    st.caption(
+        "**Cuadrante del sector** = dónde estaba el sector de la empresa en el gráfico de rotación (RRG diario) "
+        "el día de la señal · **Flujo de volumen** = si su participación en el volumen del mercado estaba sobre "
+        "(Entrando) o bajo (Saliendo) su promedio de 20 días · **Sector vs mercado** = si el sector le venía "
+        "ganando o perdiendo al mercado en el último mes. Grupos con pocas operaciones son poco confiables.")
+
+    st.subheader("Distribución de los retornos")
+    cerradas = ops[~ops["Abierta"]]
+    fig_h = go.Figure(go.Histogram(x=cerradas["Retorno %"].clip(-30, 30), nbinsx=60,
+                                   marker_color="#5ea8e6"))
+    fig_h.add_vline(x=0, line=dict(color="#8b93a3", dash="dash"))
+    fig_h.update_layout(height=300, template="plotly_dark", margin=dict(t=10, b=10),
+                        xaxis_title="Retorno por operación (%, acotado a ±30)", yaxis_title="Operaciones")
+    st.plotly_chart(fig_h, width="stretch")
+
+    st.subheader("Posiciones abiertas hoy (señales de compra vigentes)")
+    abiertas = ops[ops["Abierta"]].sort_values("Entrada", ascending=False)
+    st.dataframe(abiertas[["Ticker", "Sector", "Entrada", "Días", "Precio entrada", "Precio salida",
+                           "Retorno %", "Cuadrante sector", "Flujo sector"]]
+                 .rename(columns={"Precio salida": "Precio actual", "Retorno %": "Retorno actual %"}),
+                 hide_index=True, width="stretch", height=300, column_config={
+                     "Entrada": st.column_config.DateColumn(format="DD-MM-YYYY"),
+                     "Precio entrada": st.column_config.NumberColumn(format="%.2f"),
+                     "Precio actual": st.column_config.NumberColumn(format="%.2f"),
+                     "Retorno actual %": pct2})
+
+    with st.expander("Todas las operaciones"):
+        st.dataframe(ops.sort_values("Entrada", ascending=False)[
+            ["Ticker", "Sector", "Entrada", "Salida", "Días", "Retorno %", "Base %", "Exceso %",
+             "Cuadrante sector", "Flujo sector", "Abierta"]],
+            hide_index=True, width="stretch", height=400, column_config={
+                "Entrada": st.column_config.DateColumn(format="DD-MM-YYYY"),
+                "Salida": st.column_config.DateColumn(format="DD-MM-YYYY"),
+                "Retorno %": pct2, "Base %": pct2, "Exceso %": pct2})
+    st.caption(
+        "**Ojo con el sesgo de supervivencia:** el universo son las empresas que HOY valen más de $10B. Las "
+        "que cayeron fuerte y salieron del grupo no están, así que los resultados de comprar caídas se ven "
+        "mejores de lo que habrían sido en la práctica. Los resultados pasados no garantizan los futuros.")
 
 
 # ---------------------------------------------------------------------------
