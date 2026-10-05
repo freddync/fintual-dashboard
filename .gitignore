@@ -3,3 +3,4 @@ __pycache__/
 .streamlit/secrets.toml
 data/seguimiento.json
 data/lineas.json
+data/cartera.json
