@@ -195,3 +195,29 @@ def resumen(ops, por=None):
     if por is None:
         return stats(c)
     return c.groupby(por).apply(stats, include_groups=False).sort_values("Exceso prom. %", ascending=False)
+
+
+def acotar(ops, limite=30):
+    """Acota retorno y exceso de cada operación a ±limite %, para que un caso extremo
+    (ej. una acción que sube 1.000%) no domine los promedios."""
+    ops = ops.copy()
+    for c in ["Retorno %", "Exceso %"]:
+        ops[c] = ops[c].clip(-limite, limite)
+    return ops
+
+
+def comparar_umbrales(por_umbral, por, min_ops=30):
+    """Exceso promedio y n° de operaciones por grupo (`por`) para cada umbral de compra,
+    y el umbral con mayor exceso entre los que tienen al menos `min_ops` operaciones."""
+    exceso, n = {}, {}
+    for u, ops in por_umbral.items():
+        r = resumen(ops, por)
+        exceso[u], n[u] = r["Exceso prom. %"], r["Operaciones"]
+    exceso, n = pd.DataFrame(exceso), pd.DataFrame(n).fillna(0).astype(int)
+    validos = exceso.where(n >= min_ops)
+    mejor = pd.Series([fila.idxmax() if fila.notna().any() else None for _, fila in validos.iterrows()],
+                      index=validos.index, dtype=object)
+    out = pd.concat({"Exceso %": exceso, "Operaciones": n}, axis=1)
+    out.columns = [f"{a} (RSI<{u})" for a, u in out.columns]
+    out["Mejor umbral"] = mejor.map(lambda u: f"RSI < {u:g}" if pd.notna(u) else "pocas operaciones")
+    return out

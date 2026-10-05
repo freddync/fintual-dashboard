@@ -889,6 +889,7 @@ elif vista == "Backtest":
                f"izquierda. **Golden cross por abajo** = la línea MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL} "
                "cruza sobre su señal con ambas líneas bajo cero.")
     entrada = st.selectbox("Señal de compra", list(backtest.ENTRADAS),
+                           index=list(backtest.ENTRADAS).index("macd_y_rsi"),
                            format_func=lambda e: backtest.ENTRADAS[e].replace("umbral", f"{COL_RSI} umbral"))
     p1, p2, p3, p4 = st.columns(4)
     umbral_c = p1.number_input(f"Umbral de compra ({COL_RSI} <)", 5, 50, RSI_BAJO, step=5,
@@ -899,17 +900,46 @@ elif vista == "Backtest":
                                    "ocurrido el RSI bajo el umbral (incluye el día del cruce).")
     costo = p4.number_input("Costo por operación (%)", 0.0, 2.0, 0.1, step=0.05, format="%.2f",
                             help="Comisiones + spread, ida y vuelta. Se descuenta de cada operación.")
+    acotar = st.toggle("Acotar casos extremos a ±30%", value=True,
+                       help="Una sola acción que sube 1.000% (ej. BMNR en 2025) puede inflar todos los promedios. "
+                            "Con esto activado, el retorno y el exceso de cada operación se limitan a ±30%.")
+
+    def preparar(o):
+        o = o[o["Sector"] == sector] if sector != "Todos" else o
+        return backtest.acotar(o) if acotar and not o.empty else o
 
     ops = correr_backtest(umbral_c, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
                           VERSION_OPCIONES, entrada, ventana)
+
+    if entrada != "macd":
+        with st.expander("Comparar umbrales de compra (RSI < 20, 30 y 40) por sector y por cuadrante"):
+            por_umbral = {}
+            for u in (20, 30, 40):
+                o = preparar(correr_backtest(u, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
+                                             VERSION_OPCIONES, entrada, ventana))
+                if not o.empty:
+                    por_umbral[u] = o
+            fmt_cmp = {c: st.column_config.NumberColumn(format="%+.2f%%") for c in
+                       [f"Exceso % (RSI<{u})" for u in por_umbral]}
+            fmt_cmp.update({c: st.column_config.NumberColumn(format="%d") for c in
+                            [f"Operaciones (RSI<{u})" for u in por_umbral]})
+            st.markdown("**Total**")
+            st.dataframe(pd.DataFrame({u: backtest.resumen(o) for u, o in por_umbral.items()}).T
+                         .rename(index=lambda u: f"RSI < {u}"), width="stretch")
+            for por, titulo in [("Sector", "Por sector"), ("Cuadrante sector", "Por cuadrante del sector (RRG)")]:
+                st.markdown(f"**{titulo}**")
+                st.dataframe(backtest.comparar_umbrales(por_umbral, por), width="stretch", column_config=fmt_cmp)
+            st.caption("**Mejor umbral** = el de mayor exceso entre los que tienen al menos 30 operaciones. Ojo: "
+                       "elegir el mejor de cada grupo mirando los resultados sobreestima lo que rendiría a futuro; "
+                       "las diferencias entre umbrales dentro de un mismo sector suelen estar dentro del margen de "
+                       "error.")
 
     with st.expander("Comparar todas las señales de compra (mismos umbrales y venta)"):
         comp = {}
         for e in backtest.ENTRADAS:
             o = correr_backtest(umbral_c, umbral_v, costo, tuple(sorted(sel_uni)), json.dumps(sello),
                                 VERSION_OPCIONES, e, ventana)
-            if sector != "Todos":
-                o = o[o["Sector"] == sector]
+            o = preparar(o)
             if not o.empty:
                 comp[backtest.ENTRADAS[e]] = backtest.resumen(o)
         st.dataframe(pd.DataFrame(comp).T, width="stretch", column_config={
@@ -920,8 +950,7 @@ elif vista == "Backtest":
                ["Retorno prom. %", "Retorno mediano %", "Base prom. %", "Exceso prom. %", "Peor %"]},
             "Días prom.": st.column_config.NumberColumn(format="%.1f"),
             "Factor de ganancia": st.column_config.NumberColumn(format="%.2f")})
-    if sector != "Todos":
-        ops = ops[ops["Sector"] == sector]
+    ops = preparar(ops)
     if ops.empty:
         st.info("No hay operaciones con estos parámetros.")
         st.stop()
