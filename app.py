@@ -473,7 +473,8 @@ def datos_sectores(frecuencia, universos, _sello_key, version=""):
     tickers = [t for t, i in info_.items() if i.get("universe") in universos]
     precios = {t: df for t in tickers if (df := cargar_precios(t)) is not None}
     cierre, dolares = sectores.paneles(precios, frecuencia)
-    s = sectores.series(cierre, dolares, {t: info_[t].get("sector", "Sin clasificar") for t in precios})
+    s = sectores.series(cierre, dolares, {t: info_[t].get("sector", "Sin clasificar") for t in precios},
+                        frecuencia)
     ratio, mom = sectores.rrg(s["rs"], frecuencia)
     return s, ratio, mom
 
@@ -538,7 +539,7 @@ def grafico_calor(df, fecha, frecuencia, clave):
     """Sectores (filas) x últimos períodos (columnas)."""
     d = df.loc[:fecha].tail(N_CALOR)
     d = d[d.iloc[-1].sort_values(ascending=False).index]          # el mejor del período, arriba
-    x = [f"{f:%d-%b}" for f in d.index]
+    x = [f"{f:%b-%y}" if frecuencia == "Mensual" else f"{f:%d-%b}" for f in d.index]
     centro = 50 if clave == "alza" else 0
     lim = (d - centro).abs().quantile(0.95).max() or 1
     fig = go.Figure(go.Heatmap(
@@ -664,11 +665,12 @@ elif vista == "Sectores":
                "pesa lo mismo dentro de su sector. 'Mercado' = promedio de todas las empresas del universo "
                "elegido a la izquierda (el filtro de sector no aplica aquí).")
 
-    frec = st.radio("Frecuencia", ["Diaria", "Semanal"], horizontal=True, key="frec_sect")
+    frec = st.radio("Frecuencia", ["Diaria", "Semanal", "Mensual"], horizontal=True, key="frec_sect")
     s, ratio, mom = datos_sectores(frec, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
     fechas = list(s["rs"].index[-60:])
     en_curso = periodo_en_curso(fechas[-1], frec)
-    etiqueta = {f: (f"{f:%d-%b-%Y}" if frec == "Diaria" else f"semana al {f:%d-%b-%Y}")
+    formato = {"Diaria": "{:%d-%b-%Y}", "Semanal": "semana al {:%d-%b-%Y}", "Mensual": "{:%b-%Y}"}[frec]
+    etiqueta = {f: formato.format(f)
                    + (" (en curso)" if f == fechas[-1] and en_curso else "") for f in fechas}
     fecha = st.select_slider("Período (muévelo para ver rotaciones pasadas)", options=fechas,
                              value=fechas[-2] if en_curso else fechas[-1],
@@ -695,7 +697,7 @@ elif vista == "Sectores":
     st.caption(
         "**vs mercado** = retorno del sector menos el del mercado · **% al alza** = parte de las empresas del "
         "sector que subió (amplitud) · **Vol. relativo** = volumen en dólares del período / su promedio de los "
-        f"{sectores.VENTANA_VOL} anteriores · **Part. volumen** = parte del volumen en dólares del mercado que "
+        f"{sectores.VENTANA_VOL[frec]} anteriores · **Part. volumen** = parte del volumen en dólares del mercado que "
         "se transó en el sector · **Δ participación** = participación actual menos su promedio: positivo = "
         "está entrando más dinero que lo habitual · **Relativo 1m/3m** = cuánto le ganó (o perdió) al "
         "mercado en ese plazo. Una rotación se ve como sectores con **vs mercado** y **Δ participación** "
@@ -767,7 +769,7 @@ else:
     c[5].metric("EV/EBITDA", f"{fila['EV/EBITDA']:.1f}x" if pd.notna(fila["EV/EBITDA"]) else "—")
 
     # ---- últimas noticias ----
-    with st.expander("📰 Últimas noticias", expanded=True):
+    with st.expander("📰 Últimas noticias", expanded=False):
         notas, err_n = cargar_noticias(ticker, VERSION_OPCIONES)
         if err_n:
             st.caption(f"No se pudieron cargar las noticias: {err_n}")

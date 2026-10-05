@@ -10,6 +10,7 @@ sector), comparando contra el promedio de todo el universo ("mercado"):
   vs mercado (pp)    retorno del sector menos el del mercado
   % al alza          amplitud: qué parte de las empresas del sector subió
   Vol. relativo      volumen en dólares del período / su promedio de los 20 anteriores
+                     (12 en mensual)
   Part. volumen %    qué parte del volumen en dólares del mercado se transó en el sector
   Δ participación    participación actual menos su promedio de los 20 períodos anteriores
                      (pp): positivo = está entrando más dinero que lo habitual
@@ -26,9 +27,12 @@ sector), comparando contra el promedio de todo el universo ("mercado"):
 
 import pandas as pd
 
-VENTANA_VOL = 20                                  # períodos para el promedio de volumen
-RRG = {"Diaria": (20, 5), "Semanal": (10, 4)}     # (ventana del RS-Ratio, rezago del RS-Momentum)
-MOMENTUM = {"Diaria": {"1m": 21, "3m": 63}, "Semanal": {"1m": 4, "3m": 13}}
+# períodos para el promedio de volumen (en mensual, un año)
+VENTANA_VOL = {"Diaria": 20, "Semanal": 20, "Mensual": 12}
+# (ventana del RS-Ratio, rezago del RS-Momentum)
+RRG = {"Diaria": (20, 5), "Semanal": (10, 4), "Mensual": (6, 2)}
+MOMENTUM = {"Diaria": {"1m": 21, "3m": 63}, "Semanal": {"1m": 4, "3m": 13}, "Mensual": {"1m": 1, "3m": 3}}
+REMUESTREO = {"Semanal": "W-FRI", "Mensual": "ME"}   # la semana cierra el viernes; el mes, su último día
 
 
 def paneles(precios, frecuencia):
@@ -36,16 +40,16 @@ def paneles(precios, frecuencia):
     cierre = pd.DataFrame({t: df.set_index("Date")["Close"] for t, df in precios.items()}).sort_index()
     dolares = pd.DataFrame({t: df.set_index("Date")["Close"] * df.set_index("Date")["Volume"]
                             for t, df in precios.items()}).sort_index()
-    if frecuencia == "Semanal":
-        cierre = cierre.resample("W-FRI").last()
-        dolares = dolares.resample("W-FRI").sum(min_count=1)
+    if frecuencia in REMUESTREO:
+        cierre = cierre.resample(REMUESTREO[frecuencia]).last()
+        dolares = dolares.resample(REMUESTREO[frecuencia]).sum(min_count=1)
     return cierre, dolares
 
 
 MIN_EMPRESAS = 5   # sectores más chicos se excluyen (con 1-2 empresas solo meten ruido)
 
 
-def series(cierre, dolares, sector_de):
+def series(cierre, dolares, sector_de, frecuencia):
     """Series por sector (filas = fechas, columnas = sectores)."""
     sector_de = pd.Series(sector_de).reindex(cierre.columns)
     conteo = sector_de.value_counts()
@@ -59,8 +63,9 @@ def series(cierre, dolares, sector_de):
     ret_mkt = ret.mean(axis=1)
 
     part = dv_sec.div(dv_sec.sum(axis=1), axis=0) * 100
-    prom_part = part.shift(1).rolling(VENTANA_VOL, min_periods=5).mean()
-    prom_dv = dv_sec.shift(1).rolling(VENTANA_VOL, min_periods=5).mean()
+    v = VENTANA_VOL[frecuencia]
+    prom_part = part.shift(1).rolling(v, min_periods=5).mean()
+    prom_dv = dv_sec.shift(1).rolling(v, min_periods=5).mean()
 
     idx_sec = (1 + ret_sec.fillna(0)).cumprod()
     idx_mkt = (1 + ret_mkt.fillna(0)).cumprod()
