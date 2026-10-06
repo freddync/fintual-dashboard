@@ -402,6 +402,14 @@ def cargar_muros(ticker, precio, version=""):
         return None, f"{type(e).__name__}: {e}"
 
 
+@st.cache_data(ttl=3600, show_spinner="Calculando el benchmark SPY...")
+def cargar_benchmark(fecha, version=""):
+    try:
+        return opciones.benchmark_desde("SPY", fecha), None
+    except Exception as e:
+        return None, f"{type(e).__name__}: {e}"
+
+
 @st.cache_data(ttl=1800, show_spinner="Buscando noticias...")
 def cargar_noticias(ticker, version=""):
     try:
@@ -1113,6 +1121,42 @@ elif vista == "Mi cartera":
                    "**Dist. al stop** = cuánto le falta al precio para tocarlo. Ojo: el stop no protege de los saltos "
                    "de un día para otro (si la acción abre bajo el stop, la venta será a ese precio menor). Montos en "
                    "la moneda en que registraste el precio.")
+
+    # ---- comparación con SPY ----
+    todas = cart["posiciones"] + cart["vendidas"]
+    if todas:
+        st.subheader("Tu cartera vs. SPY")
+        invertido_total = sum(x["cantidad"] * x["precio"] for x in todas)
+        valor_abiertas = sum(x["cantidad"] * (precios_hoy["Precio"].get(x["ticker"], np.nan)
+                                              if pd.notna(precios_hoy["Precio"].get(x["ticker"], np.nan))
+                                              else x["precio"]) for x in cart["posiciones"])
+        cobrado_ventas = sum(x["cantidad"] * x["precio_venta"] for x in cart["vendidas"])
+        valor_cartera = valor_abiertas + cobrado_ventas
+        fecha0 = min(pd.Timestamp(x["fecha"]) for x in todas)
+        bench, err_b = cargar_benchmark(fecha0.date().isoformat(), VERSION_OPCIONES)
+        if err_b:
+            st.caption(f"No se pudo calcular el benchmark SPY: {err_b}")
+        else:
+            f_spy, apertura_spy, factor_spy, ultimo_spy = bench
+            valor_spy = invertido_total * factor_spy
+            ret_c = (valor_cartera / invertido_total - 1) * 100
+            ret_s = (factor_spy - 1) * 100
+            b = st.columns(3)
+            b[0].metric("Tu cartera", f"${valor_cartera:,.2f}", f"{ret_c:+.2f}%")
+            b[1].metric(f"SPY desde el {f_spy:%d-%m-%Y}", f"${valor_spy:,.2f}", f"{ret_s:+.2f}%")
+            b[2].metric("Diferencia", f"${valor_cartera - valor_spy:+,.2f}", f"{ret_c - ret_s:+.2f} pp",
+                        help="Positivo = tu cartera le va ganando a SPY.")
+            if ret_c >= ret_s:
+                st.success(f"Le vas ganando a SPY por **{ret_c - ret_s:.2f} puntos**.")
+            else:
+                st.warning(f"SPY te va ganando por **{ret_s - ret_c:.2f} puntos**.")
+            st.caption(
+                f"**Benchmark:** los mismos ${invertido_total:,.2f} que invertiste en total, comprados de una vez "
+                f"en SPY a la apertura del {f_spy:%d-%m-%Y} (tu compra más antigua; precio US$ {apertura_spy:,.2f}), "
+                f"con dividendos reinvertidos. Último precio SPY: US$ {ultimo_spy:,.2f}. **Tu cartera:** valor actual "
+                "de las posiciones abiertas + lo cobrado en ventas (no incluye impuestos ni costos de cambio). "
+                "Ojo: el benchmark supone todo el dinero invertido desde el primer día; si fuiste comprando de a "
+                "poco, SPY tuvo más tiempo el dinero trabajando, así que la comparación es exigente para tu cartera.")
 
     # ---- registrar una compra ----
     with st.expander("➕ Registrar una compra", expanded=not cart["posiciones"]):

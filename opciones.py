@@ -79,6 +79,28 @@ MACRO = {
 }
 
 
+def benchmark_desde(simbolo, fecha):
+    """Compra en la APERTURA de `fecha` (o del primer día hábil siguiente) y su valor hoy,
+    con dividendos reinvertidos. Devuelve (fecha de compra, precio de apertura, factor de
+    crecimiento total desde esa apertura, último precio)."""
+    inicio = int(pd.Timestamp(fecha).timestamp()) - 86400 * 7
+    r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{simbolo}",
+                     params={"period1": inicio, "period2": int(pd.Timestamp.now().timestamp()) + 86400,
+                             "interval": "1d", "events": "div,splits"}, headers=HEADERS, timeout=20)
+    r.raise_for_status()
+    res = r.json()["chart"]["result"][0]
+    q = res["indicators"]["quote"][0]
+    df = pd.DataFrame({"open": q["open"], "close": q["close"],
+                       "adj": res["indicators"]["adjclose"][0]["adjclose"]},
+                      index=pd.to_datetime(res["timestamp"], unit="s").normalize()).dropna()
+    df = df[df.index >= pd.Timestamp(fecha).normalize()]
+    if df.empty:
+        raise RuntimeError(f"Sin datos de {simbolo} desde {fecha}")
+    d0 = df.iloc[0]
+    apertura_ajustada = d0["open"] * d0["adj"] / d0["close"]     # apertura en la misma escala que el ajustado
+    return df.index[0], float(d0["open"]), float(df["adj"].iloc[-1] / apertura_ajustada), float(df["close"].iloc[-1])
+
+
 def serie_diaria(simbolo, rango="5y"):
     """Cierres diarios de un índice o futuro de Yahoo, indexados por fecha."""
     r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{simbolo}",
