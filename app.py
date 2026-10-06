@@ -528,6 +528,10 @@ COLUMNAS = {
     "Precio actual / venta": st.column_config.NumberColumn(format="%.2f"),
     "Retorno %": PCT,
     "vs SMA 200 %": st.column_config.NumberColumn(format="%+.1f%%"),
+    "vs sector 5d": st.column_config.NumberColumn(
+        format="%+.1f pp", help="Retorno de la acción en los 5 días previos a la señal menos el de sus pares del "
+                                "mismo sector. Muy negativo (≤ −5 pp) = cayó mucho más que su sector: en el "
+                                "backtest, esas señales tuvieron el rebote más fuerte."),
     # pestaña Mi cartera
     "Fecha compra": st.column_config.DateColumn(format="DD-MM-YYYY"),
     "Fecha venta": st.column_config.DateColumn(format="DD-MM-YYYY"),
@@ -643,6 +647,29 @@ CICLICOS = {"Tecnología", "Industrial", "Consumo discrecional", "Financiero"}
 SMA_LARGA = 200
 
 
+REZAGO_FUERTE = -5   # pp bajo el sector en 5 días: en el backtest, el grupo de mejor rebote
+
+
+@st.cache_data(show_spinner=False)
+def vs_sector_5d(universos, _sello_key, version=""):
+    """DataFrame fechas x tickers: retorno 5 días de la acción − retorno 5 días de sus pares del
+    mismo sector (excluyéndola, igual peso), en puntos porcentuales."""
+    info_ = cargar_info()
+    tickers = [t for t, i in info_.items() if i.get("universe") in universos]
+    C = pd.DataFrame({t: df.set_index("Date")["Close"] for t in tickers
+                      if (df := cargar_precios(t)) is not None}).sort_index()
+    R = C.pct_change(5, fill_method=None) * 100
+    out = pd.DataFrame(index=R.index, columns=R.columns, dtype=float)
+    sec_de = {t: info_[t].get("sector", "Sin clasificar") for t in R.columns}
+    for s_ in set(sec_de.values()):
+        cols = [t for t in R.columns if sec_de[t] == s_]
+        sub = R[cols]
+        suma, n = sub.sum(axis=1, min_count=1), sub.notna().sum(axis=1)
+        pares = (suma.values[:, None] - sub.values) / (n - 1).where(n > 1).values[:, None]
+        out[cols] = sub.values - pares
+    return out
+
+
 @st.cache_data(show_spinner="Buscando señales...")
 def senales_config(universos, _sello_key, version=""):
     """Todas las señales de la configuración, cada una con su seguimiento (abierta, vendida...)."""
@@ -668,6 +695,9 @@ def senales_config(universos, _sello_key, version=""):
     o["vs SMA 200 %"] = dist
     ciclica = o["Sector"].isin(CICLICOS)
     o = o[(ciclica & (o["vs SMA 200 %"] < 0)) | (~ciclica & (o["vs SMA 200 %"] > 0))]
+    rel = vs_sector_5d(universos, _sello_key, version)
+    o["vs sector 5d"] = [rel.at[f, t] if (f in rel.index and t in rel.columns) else np.nan
+                         for t, f in zip(o["Ticker"], o["Señal"])]
     return o.sort_values(["Señal", "Ticker"], ascending=[False, True])
 
 
@@ -692,6 +722,7 @@ def tabla_senales(df, nombres, provisional, ult):
         "Cuadrante sector": [("⭐ " if q == "Mejorando" else "") + q for q in df["Cuadrante sector"]],
         "Flujo sector": df["Flujo sector"],
         "vs SMA 200 %": df["vs SMA 200 %"],
+        "vs sector 5d": df["vs sector 5d"],
         "Compra": df["Entrada"],
         "Precio compra": df["Precio entrada"],
         "Precio actual / venta": df["Precio salida"],
@@ -1008,14 +1039,20 @@ if vista == "General":
                     st.caption("Ninguna empresa cumple la regla de compra en la última sesión.")
                 else:
                     tc = tabla_senales(compras, nombres, provisional, ult)
-                    tc = tc[["Ticker", "Nombre", "Sector", "Estado", "RSI señal", "Umbral", "vs SMA 200 %",
-                             "Cuadrante sector", "Flujo sector", "Precio actual / venta"]].rename(
+                    tc = tc[["Ticker", "Nombre", "Sector", "Estado", "vs sector 5d", "RSI señal", "Umbral",
+                             "vs SMA 200 %", "Cuadrante sector", "Flujo sector", "Precio actual / venta"]].rename(
                         columns={"Precio actual / venta": "Último cierre"})
                     mostrar_tabla(tc, "tabla_compras", 4, height=min(450, 38 + 35 * len(tc)))
                     st.caption(f"Regla: la compra se hace en la **apertura siguiente** a la señal del {ult:%d-%b}. "
                                "Primero van las de sector ⭐ Mejorando (el contexto que mejor rindió) y luego por "
                                f"{COL_RSI} más bajo. **Último cierre** es referencial: el precio real será el de la "
                                "apertura.")
+                    fuertes = tc.loc[tc["vs sector 5d"] <= REZAGO_FUERTE, "Ticker"].tolist()
+                    st.caption(f"**vs sector 5d** = cuánto más (o menos) cayó la acción que sus pares del sector en la "
+                               f"última semana. En el backtest, las señales con {REZAGO_FUERTE} pp o menos rindieron 2-3 "
+                               "veces más que el resto (+7,7% de exceso por operación contra ~2-3%), así que sirve "
+                               "para elegir si no puedes tomar todas. "
+                               + (f"Hoy cumplen: **{', '.join(fuertes)}**." if fuertes else "Hoy ninguna cumple."))
 
                 st.subheader("🔴 Vender")
                 if ventas.empty:
