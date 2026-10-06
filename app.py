@@ -223,6 +223,7 @@ def guardar_seguimiento(seg):
 
 CARTERA = "cartera.json"   # compras registradas a mano, en el mismo Gist
 UMBRALES_VENTA = [60, 70, 80]
+STOPS = [0, 10, 15, 20, 25]   # % de pérdida; 0 = sin stop
 
 
 def leer_cartera():
@@ -231,6 +232,7 @@ def leer_cartera():
     c.setdefault("posiciones", [])
     c.setdefault("vendidas", [])
     c.setdefault("umbral", 70)
+    c.setdefault("stop", 20)
     return c
 
 
@@ -523,6 +525,8 @@ COLUMNAS = {
     "Cantidad": st.column_config.NumberColumn(format="%.9f"),
     "Precio venta": st.column_config.NumberColumn(format="%.2f"),
     "Precio actual": st.column_config.NumberColumn(format="%.2f"),
+    "Precio stop": st.column_config.NumberColumn(format="%.2f"),
+    "Dist. al stop %": st.column_config.NumberColumn(format="%+.1f%%"),
     "Invertido": st.column_config.NumberColumn(format="$%,.2f"),
     "Valor actual": st.column_config.NumberColumn(format="$%,.2f"),
     "Ganancia $": st.column_config.NumberColumn(format="$%+,.2f"),
@@ -1008,8 +1012,8 @@ elif vista == "Mi cartera":
     cart = leer_cartera()
     precios_hoy = data.set_index("Ticker")
 
-    # ---- tu umbral de venta (se guarda) ----
-    u1, u2 = st.columns([2, 5], vertical_alignment="bottom")
+    # ---- tus reglas de venta (se guardan) ----
+    u1, u3, u2 = st.columns([2, 3, 4], vertical_alignment="bottom")
     umbral_cart = u1.radio(f"Tu señal de venta: {COL_RSI} >", UMBRALES_VENTA,
                            index=UMBRALES_VENTA.index(cart["umbral"]) if cart["umbral"] in UMBRALES_VENTA else 1,
                            horizontal=True, key="umbral_cartera")
@@ -1017,8 +1021,16 @@ elif vista == "Mi cartera":
         cart["umbral"] = umbral_cart
         guardar_cartera(cart)
         st.rerun()
-    u2.caption(f"En el backtest, {COL_RSI} > 60 fue la salida más eficiente por día, > 70 el mejor equilibrio "
-               "y > 80 la de mayor ganancia por operación (pero con el dinero más tiempo invertido).")
+    stop_cart = u3.radio("Stop de pérdida", STOPS,
+                         index=STOPS.index(cart["stop"]) if cart["stop"] in STOPS else 3,
+                         format_func=lambda x: "Sin stop" if x == 0 else f"−{x}%", horizontal=True, key="stop_cartera")
+    if stop_cart != cart["stop"]:
+        cart["stop"] = stop_cart
+        guardar_cartera(cart)
+        st.rerun()
+    u2.caption(f"En el backtest, {COL_RSI} > 70 fue el mejor equilibrio para vender. Un stop amplio de −20% casi "
+               "no restó rentabilidad y limitó la peor pérdida de −57% a −20%; stops ajustados (−5% a −10%) la "
+               "empeoraron mucho.")
 
     # ---- posiciones abiertas ----
     if not cart["posiciones"]:
@@ -1032,7 +1044,15 @@ elif vista == "Mi cartera":
             invertido = pos["cantidad"] * pos["precio"]
             valor = pos["cantidad"] * act
             cruzados = [u for u in UMBRALES_VENTA if pd.notna(rsi_t) and rsi_t > u]
-            if pd.notna(rsi_t) and rsi_t > umbral_cart:
+            # stop: si desde la compra algún mínimo diario tocó el nivel (o el precio actual está bajo él)
+            nivel = pos["precio"] * (1 - stop_cart / 100) if stop_cart else np.nan
+            hist_t = cargar_precios(t)
+            minimo = (hist_t.loc[hist_t["Date"] >= pd.Timestamp(pos["fecha"]), "Low"].min()
+                      if hist_t is not None else np.nan)
+            toco_stop = bool(stop_cart) and ((pd.notna(minimo) and minimo <= nivel) or (pd.notna(act) and act <= nivel))
+            if toco_stop:
+                senal = f"🔴 VENDER (tocó stop −{stop_cart}%)"
+            elif pd.notna(rsi_t) and rsi_t > umbral_cart:
                 senal = f"🔴 VENDER ({COL_RSI} > {umbral_cart})"
             elif cruzados:
                 senal = f"🟠 {COL_RSI} > {max(cruzados)} (tu umbral es {umbral_cart})"
@@ -1045,16 +1065,18 @@ elif vista == "Mi cartera":
                 "Fecha compra": pd.Timestamp(pos["fecha"]),
                 "Días": (pd.Timestamp.now().normalize() - pd.Timestamp(pos["fecha"])).days,
                 "Cantidad": pos["cantidad"], "Precio compra": pos["precio"], "Precio actual": act,
+                "Precio stop": nivel, "Dist. al stop %": (act / nivel - 1) * 100 if stop_cart else np.nan,
                 "Invertido": invertido, "Valor actual": valor,
                 "Señal MACD": precios_hoy["Señal MACD"].get(t, ""),
             })
         tc = pd.DataFrame(filas_c)
         vender_ya = tc["Señal de venta"].str.startswith("🔴")
         if vender_ya.any():
-            st.error(f"**Señal de venta en {vender_ya.sum()} posición(es):** "
-                     + ", ".join(tc.loc[vender_ya, "Ticker"]) +
-                     f". Su {COL_RSI} cerró sobre {umbral_cart}; según la regla del backtest, la venta sería en "
-                     "la próxima apertura.")
+            detalle = [f"{f_['Ticker']} ({f_['Señal de venta'].split('(')[1].rstrip(')')})"
+                       for _, f_ in tc[vender_ya].iterrows()]
+            st.error(f"**Señal de venta en {vender_ya.sum()} posición(es):** " + ", ".join(detalle) +
+                     ". Según las reglas del backtest, la venta por RSI es en la próxima apertura; la del stop, "
+                     "apenas el precio toca el nivel.")
         k = st.columns(4)
         inv, val = tc["Invertido"].sum(), tc["Valor actual"].sum()
         k[0].metric("Posiciones abiertas", f"{len(tc)}")
@@ -1065,8 +1087,11 @@ elif vista == "Mi cartera":
                   colorear=["Ganancia $", "Ganancia %"])
         st.caption(f"**Precio actual** y **{COL_RSI}** = último dato de la actualización automática (se refresca "
                    "cada hora en horario de mercado; durante la sesión la barra del día es parcial). 🔴 = el RSI "
-                   f"superó tu umbral · 🟠 = superó otro de los umbrales ({', '.join(map(str, UMBRALES_VENTA))}) "
-                   "pero no el tuyo. Montos en la moneda en que registraste el precio.")
+                   "superó tu umbral, o el precio tocó tu stop (se revisa el mínimo de cada día desde la compra) · "
+                   f"🟠 = el RSI superó otro de los umbrales ({', '.join(map(str, UMBRALES_VENTA))}) pero no el tuyo. "
+                   "**Dist. al stop** = cuánto le falta al precio para tocarlo. Ojo: el stop no protege de los saltos "
+                   "de un día para otro (si la acción abre bajo el stop, la venta será a ese precio menor). Montos en "
+                   "la moneda en que registraste el precio.")
 
     # ---- registrar una compra ----
     with st.expander("➕ Registrar una compra", expanded=not cart["posiciones"]):
