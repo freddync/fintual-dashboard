@@ -519,6 +519,7 @@ COLUMNAS = {
     "Precio compra": st.column_config.NumberColumn(format="%.2f"),
     "Precio actual / venta": st.column_config.NumberColumn(format="%.2f"),
     "Retorno %": PCT,
+    "vs SMA 200 %": st.column_config.NumberColumn(format="%+.1f%%"),
     # pestaña Mi cartera
     "Fecha compra": st.column_config.DateColumn(format="DD-MM-YYYY"),
     "Fecha venta": st.column_config.DateColumn(format="DD-MM-YYYY"),
@@ -627,6 +628,11 @@ UMBRAL_SECTOR = {
     "Servicios públicos": 40, "Materiales": 40,
 }   # Salud y Servicios de comunicación quedan fuera: la señal no les agregó valor
 CUADRANTES_EXCLUIDOS = {"Debilitándose"}   # sector perdiendo fuerza: la señal rinde la mitad
+# Filtro SMA 200 por tipo de acción: las cíclicas rinden mejor si la señal ocurre BAJO su media de 200
+# días (caída fuerte que rebota); las defensivas y de materias primas, solo si siguen SOBRE ella (si
+# cayeron bajo la media suelen seguir cayendo). Backtest: Sharpe 1,46 -> 1,92 y caída máx. -9% -> -7%.
+CICLICOS = {"Tecnología", "Industrial", "Consumo discrecional", "Financiero"}
+SMA_LARGA = 200
 
 
 @st.cache_data(show_spinner="Buscando señales...")
@@ -641,8 +647,20 @@ def senales_config(universos, _sello_key, version=""):
     if not partes:
         return pd.DataFrame()
     o = pd.concat(partes)
-    return o[~o["Cuadrante sector"].isin(CUADRANTES_EXCLUIDOS)].sort_values(["Señal", "Ticker"],
-                                                                           ascending=[False, True])
+    o = o[~o["Cuadrante sector"].isin(CUADRANTES_EXCLUIDOS)].copy()
+    # distancia del cierre del día de la señal a la SMA 200
+    dist, smas = [], {}
+    for t, f, c_ in zip(o["Ticker"], o["Señal"], o["Cierre señal"]):
+        if t not in smas:
+            df_t = cargar_precios(t)
+            smas[t] = (df_t.set_index("Date")["Close"].rolling(SMA_LARGA).mean() if df_t is not None
+                       else pd.Series(dtype=float))
+        sma = smas[t].get(f, np.nan)
+        dist.append((c_ / sma - 1) * 100 if pd.notna(sma) and sma else np.nan)
+    o["vs SMA 200 %"] = dist
+    ciclica = o["Sector"].isin(CICLICOS)
+    o = o[(ciclica & (o["vs SMA 200 %"] < 0)) | (~ciclica & (o["vs SMA 200 %"] > 0))]
+    return o.sort_values(["Señal", "Ticker"], ascending=[False, True])
 
 
 def estado_senal(fila, provisional):
@@ -665,6 +683,7 @@ def tabla_senales(df, nombres, provisional, ult):
         "Umbral": df["Umbral"],
         "Cuadrante sector": [("⭐ " if q == "Mejorando" else "") + q for q in df["Cuadrante sector"]],
         "Flujo sector": df["Flujo sector"],
+        "vs SMA 200 %": df["vs SMA 200 %"],
         "Compra": df["Entrada"],
         "Precio compra": df["Precio entrada"],
         "Precio actual / venta": df["Precio salida"],
@@ -902,6 +921,8 @@ if vista == "General":
                 " · ".join(f"**{COL_RSI} < {u}**: " + ", ".join(x for x, v in UMBRAL_SECTOR.items() if v == u)
                            for u in sorted(set(UMBRAL_SECTOR.values()))) +
                 ". Fuera: Salud, Servicios de comunicación y señales con el sector **Debilitándose**. "
+                f"**Filtro SMA {SMA_LARGA}**: las cíclicas ({', '.join(sorted(CICLICOS))}) solo si el precio está "
+                f"**bajo** su SMA {SMA_LARGA}; las demás solo si está **sobre** ella. "
                 f"⭐ = sector **Mejorando** (el mejor contexto). Venta: {COL_RSI} > {RSI_ALTO}. Compra y venta "
                 "en la apertura del día siguiente a la señal.")
             sen = senales_config(tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
@@ -979,8 +1000,8 @@ if vista == "General":
                     st.caption("Ninguna empresa cumple la regla de compra en la última sesión.")
                 else:
                     tc = tabla_senales(compras, nombres, provisional, ult)
-                    tc = tc[["Ticker", "Nombre", "Sector", "Estado", "RSI señal", "Umbral", "Cuadrante sector",
-                             "Flujo sector", "Precio actual / venta"]].rename(
+                    tc = tc[["Ticker", "Nombre", "Sector", "Estado", "RSI señal", "Umbral", "vs SMA 200 %",
+                             "Cuadrante sector", "Flujo sector", "Precio actual / venta"]].rename(
                         columns={"Precio actual / venta": "Último cierre"})
                     mostrar_tabla(tc, "tabla_compras", 4, height=min(450, 38 + 35 * len(tc)))
                     st.caption(f"Regla: la compra se hace en la **apertura siguiente** a la señal del {ult:%d-%b}. "
