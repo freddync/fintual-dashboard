@@ -1345,19 +1345,19 @@ elif vista == "Sectores":
             k, et = tr["k"], tr["etiquetas"]
             unidad = {"Mes": "del mes", "Semana": "de la semana", "Día": ""}[per]
             if per == "Día":
-                st.caption(f"Cada columna es **una rueda** (la primera, {et[0]}, es la más reciente; puede estar incompleta "
+                st.caption(f"Cada columna es **una rueda** (la última a la derecha, {et[0]}, es la más reciente; puede estar incompleta "
                            "si la sesión sigue abierta). Sirve para seguir día a día cómo va la semana.")
             else:
                 st.caption(f"Van **{k} {'rueda' if k == 1 else 'ruedas'} {unidad}**: de cada {per.lower()} se toman solo sus primeras "
                            f"{k} ruedas, así se compara el mismo tramo (por ejemplo, del 1 al día de hoy de cada mes). "
-                           f"La primera columna ({et[0]}) es el período en curso; su última rueda puede estar incompleta si la "
+                           f"Las columnas van de la más antigua (izquierda) a la más reciente (derecha); la última ({et[0]}) es el período en curso; su última rueda puede estar incompleta si la "
                            "sesión sigue abierta.")
 
             st.subheader("Ranking de los sectores en el mismo tramo")
             rk = tr["rank"]
             cambio = rk[et[1]] - rk[et[0]]
-            tabla_rk = rk.copy()
-            tabla_rk.insert(0, "Cambio", ["=" if c == 0 else (f"↑{c}" if c > 0 else f"↓{-c}") for c in cambio])
+            tabla_rk = rk[et[::-1]].copy()            # de la fecha más antigua (izquierda) a la más reciente (derecha)
+            tabla_rk["Cambio"] = ["=" if c == 0 else (f"↑{c}" if c > 0 else f"↓{-c}") for c in cambio]
             tabla_rk = tabla_rk.sort_values(et[0]).rename_axis("Sector").reset_index()
             st.dataframe(
                 tabla_rk.style.map(color_rank(len(rk)), subset=et)
@@ -1384,7 +1384,8 @@ elif vista == "Sectores":
                 racha.append(r)
             tabla_v = pd.DataFrame({"Sector": pa.index, "Flujo": np.where(delta > 0, "Entrando", "Saliendo"),
                                     "Δ participación (pp)": delta.values, "Racha": racha})
-            tabla_v = pd.concat([tabla_v, pa.reset_index(drop=True)], axis=1).sort_values("Δ participación (pp)", ascending=False)
+            tabla_v = pd.concat([tabla_v[["Sector"]], pa[et[::-1]].reset_index(drop=True),          # más antigua → más reciente
+                                 tabla_v.drop(columns="Sector")], axis=1).sort_values("Δ participación (pp)", ascending=False)
             st.dataframe(
                 tabla_v.style.map(colorear_num, subset=["Δ participación (pp)"])
                        .map(lambda v: f"color: {COLOR_FLUJO.get(v, '')}; font-weight: 600", subset=["Flujo"]),
