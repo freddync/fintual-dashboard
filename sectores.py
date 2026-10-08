@@ -138,6 +138,47 @@ def tabla(s, ratio, mom, fecha, frecuencia):
 
 
 # ---------------------------------------------------------------------------
+# Mismo tramo: semana a semana / mes a mes
+# ---------------------------------------------------------------------------
+
+MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+
+
+def tramos(cierre, dolares, sector_de, periodo, n):
+    """Compara el período en curso con los `n` anteriores usando el MISMO tramo: si hoy van k ruedas
+    del mes (o de la semana), de cada período se toman sus primeras k ruedas.
+    `cierre` y `dolares` son diarios. Devuelve dict con DataFrames sectores x períodos
+    (el más reciente primero): ret (%), rank (1 = mejor retorno), part (% del volumen en dólares),
+    más k (ruedas del tramo) y etiquetas de cada período."""
+    sector_de = pd.Series(sector_de).reindex(cierre.columns)
+    conteo = sector_de.value_counts()
+    sector_de = sector_de[sector_de.isin(conteo[conteo >= MIN_EMPRESAS].index)]
+    cierre, dolares = cierre[sector_de.index], dolares[sector_de.index]
+    ret = cierre.pct_change(fill_method=None).clip(-0.5, 0.5)
+    ret_sec = ret.T.groupby(sector_de).mean().T
+    dv_sec = dolares.T.groupby(sector_de).sum(min_count=1).T
+    idx = ret_sec.dropna(how="all").index
+    clave = pd.Series(idx.to_period("M" if periodo == "Mes" else "W-FRI"), index=idx)
+    grupos = list(dict.fromkeys(clave))[-(n + 1):][::-1]          # en curso primero
+    k = int((clave == grupos[0]).sum())
+    R, P, etiquetas = {}, {}, []
+    for g in grupos:
+        dias = clave.index[clave == g][:k]
+        if periodo == "Mes":
+            et = f"{MESES[g.month - 1]}-{str(g.year)[2:]}"
+        else:
+            ini = g.start_time + pd.Timedelta(days=2)   # el período W-FRI parte el sábado: la etiqueta usa el lunes
+            et = f"sem. {ini.day:02d}-{MESES[ini.month - 1]}"
+        etiquetas.append(et)
+        R[et] = ((1 + ret_sec.loc[dias]).prod() - 1) * 100
+        tot = dv_sec.loc[dias].sum()
+        P[et] = tot / tot.sum() * 100
+    R, P = pd.DataFrame(R), pd.DataFrame(P)
+    rank = R.rank(ascending=False, method="min").astype(int)
+    return {"ret": R, "rank": rank, "part": P, "k": k, "etiquetas": etiquetas}
+
+
+# ---------------------------------------------------------------------------
 # Riesgo vs refugio, momentum y factores macro
 # ---------------------------------------------------------------------------
 

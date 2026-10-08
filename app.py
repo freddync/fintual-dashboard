@@ -616,6 +616,27 @@ def datos_sectores(frecuencia, universos, _sello_key, version=""):
     return s, ratio, mom
 
 
+@st.cache_data(show_spinner="Comparando el mismo tramo de cada período...")
+def datos_tramos(periodo, n, universos, _sello_key, version=""):
+    """Ranking y participación de volumen por sector en el mismo tramo del período en curso y los n anteriores."""
+    info_ = cargar_info()
+    precios = {t: df for t, i in info_.items() if i.get("universe") in universos and (df := cargar_precios(t)) is not None}
+    cierre, dolares = sectores.paneles(precios, "Diaria")
+    return sectores.tramos(cierre, dolares, {t: info_[t].get("sector", "Sin clasificar") for t in precios}, periodo, n)
+
+
+def color_rank(n_total):
+    """Fondo verde para los primeros puestos y rojo para los últimos (sin matplotlib)."""
+    def f(v):
+        if pd.isna(v):
+            return ""
+        x = (v - 1) / max(n_total - 1, 1)            # 0 = primero, 1 = último
+        if x <= 0.5:
+            return f"background-color: rgba(62,207,142,{0.55 * (1 - 2 * x):.2f})"
+        return f"background-color: rgba(239,90,111,{0.55 * (2 * x - 1):.2f})"
+    return f
+
+
 @st.cache_data(show_spinner="Corriendo el backtest...")
 def correr_backtest(compra, venta, costo, universos, _sello_key, version="", entrada="rsi", ventana=10,
                     salida="rsi"):
@@ -1304,6 +1325,65 @@ elif vista == "Sectores":
     st.plotly_chart(grafico_calor(s[clave], fecha, frec, clave), width="stretch")
     st.caption(f"Últimos {N_CALOR} períodos hasta el elegido. Verde = el sector le ganó al mercado / ganó "
                "participación de volumen / subió la mayoría de sus empresas; rojo = lo contrario.")
+
+    # ---- semana a semana / mes a mes, comparando el mismo tramo ----
+    st.divider()
+    st.header("Semana a semana y mes a mes")
+    c1, c2 = st.columns([1, 2])
+    per = c1.radio("Comparar", ["Mes", "Semana"], horizontal=True, key="tramo_periodo")
+    n_per = c2.select_slider("Períodos anteriores", [3, 4, 6, 8, 12], value=6 if per == "Mes" else 8, key=f"tramo_n_{per}")
+    tr = datos_tramos(per, n_per, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+    k, et = tr["k"], tr["etiquetas"]
+    unidad = "del mes" if per == "Mes" else "de la semana"
+    st.caption(f"Van **{k} {'rueda' if k == 1 else 'ruedas'} {unidad}**: de cada {per.lower()} se toman solo sus primeras "
+               f"{k} ruedas, así se compara el mismo tramo (por ejemplo, del 1 al día de hoy de cada mes). "
+               f"La primera columna ({et[0]}) es el período en curso; su última rueda puede estar incompleta si la "
+               "sesión sigue abierta.")
+
+    st.subheader("Ranking de los sectores en el mismo tramo")
+    rk = tr["rank"]
+    cambio = rk[et[1]] - rk[et[0]]
+    tabla_rk = rk.copy()
+    tabla_rk.insert(0, "Cambio", ["=" if c == 0 else (f"↑{c}" if c > 0 else f"↓{-c}") for c in cambio])
+    tabla_rk = tabla_rk.sort_values(et[0]).rename_axis("Sector").reset_index()
+    st.dataframe(
+        tabla_rk.style.map(color_rank(len(rk)), subset=et)
+                .map(lambda v: "color: #3ecf8e; font-weight: 600" if str(v).startswith("↑")
+                     else "color: #ef5a6f; font-weight: 600" if str(v).startswith("↓") else "", subset=["Cambio"]),
+        hide_index=True, width="stretch",
+        column_config={e: st.column_config.NumberColumn(e, format="%d°") for e in et})
+    st.caption(f"Puesto de cada sector según su retorno (pesos iguales) en las primeras {k} ruedas de cada período: "
+               f"1° = el que más subió. **Cambio** = cuántos puestos subió (↑) o bajó (↓) frente al mismo tramo "
+               f"{'del mes' if per == 'Mes' else 'de la semana'} anterior.")
+
+    st.subheader("Volumen: participación y flujo en el mismo tramo")
+    pa = tr["part"]
+    delta = pa[et[0]] - pa[et[1]]
+    signo = pa.iloc[:, ::-1].diff(axis=1).iloc[:, ::-1].drop(columns=et[-1])   # Δ de cada período vs el anterior
+    racha = []
+    for sec in pa.index:
+        d0 = np.sign(signo.loc[sec].iloc[0]); r = 0
+        for v in signo.loc[sec]:
+            if np.sign(v) == d0 and d0 != 0:
+                r += 1
+            else:
+                break
+        racha.append(r)
+    tabla_v = pd.DataFrame({"Sector": pa.index, "Flujo": np.where(delta > 0, "Entrando", "Saliendo"),
+                            "Δ participación (pp)": delta.values, "Racha": racha})
+    tabla_v = pd.concat([tabla_v, pa.reset_index(drop=True)], axis=1).sort_values("Δ participación (pp)", ascending=False)
+    st.dataframe(
+        tabla_v.style.map(colorear_num, subset=["Δ participación (pp)"])
+               .map(lambda v: f"color: {COLOR_FLUJO.get(v, '')}; font-weight: 600", subset=["Flujo"]),
+        hide_index=True, width="stretch",
+        column_config={"Δ participación (pp)": st.column_config.NumberColumn(format="%+.2f"),
+                       "Racha": st.column_config.NumberColumn(format=f"%d {'meses' if per == 'Mes' else 'sem.'}",
+                                                              help="Períodos seguidos con el mismo flujo, comparando siempre el mismo tramo."),
+                       **{e: st.column_config.NumberColumn(e, format="%.1f%%") for e in et}})
+    st.caption(f"**Participación** = parte del volumen en dólares del universo que se transó en el sector durante las "
+               f"primeras {k} ruedas de cada período. **Δ participación** = {et[0]} menos {et[1]} (mismo tramo). "
+               "**Flujo** = **Entrando** si el sector ganó participación, **Saliendo** si la perdió; la **Racha** dice "
+               "cuántos períodos seguidos lleva así.")
 
     # ---- riesgo vs refugio, momentum y macro (siempre con datos diarios) ----
     st.divider()
