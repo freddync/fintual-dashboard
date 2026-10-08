@@ -1265,184 +1265,199 @@ elif vista == "Sectores":
                "pesa lo mismo dentro de su sector. 'Mercado' = promedio de todas las empresas del universo "
                "elegido a la izquierda (el filtro de sector no aplica aquí).")
 
-    frec = st.radio("Frecuencia", ["Diaria", "Semanal", "Mensual"], horizontal=True, key="frec_sect")
-    s, ratio, mom = datos_sectores(frec, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
-    fechas = list(s["rs"].index[-60:])
-    en_curso = periodo_en_curso(fechas[-1], frec)
-    formato = {"Diaria": "{:%d-%b-%Y}", "Semanal": "semana al {:%d-%b-%Y}", "Mensual": "{:%b-%Y}"}[frec]
-    etiqueta = {f: formato.format(f)
-                   + (" (en curso)" if f == fechas[-1] and en_curso else "") for f in fechas}
-    fecha = st.select_slider("Período (muévelo para ver rotaciones pasadas)", options=fechas,
-                             value=fechas[-2] if en_curso else fechas[-1],
-                             format_func=lambda f: etiqueta[f])
-    if fecha == fechas[-1] and en_curso:
-        st.warning("Período en curso: el retorno es parcial y el volumen todavía está incompleto, así que "
-                   "el volumen relativo sale bajo. Para comparar volumen, usa el último período completo.")
+    pest_sect = ["🔄 Rotación sectorial", "📅 Semana, mes y día a día", "🧭 Qué está moviendo la rotación"]
+    if st.session_state.get("tabs_sectores") not in pest_sect:
+        st.session_state.pop("tabs_sectores", None)
+    tab_rot, tab_tramo, tab_mueve = st.tabs(pest_sect, key="tabs_sectores", on_change="rerun")
 
-    tb = sectores.tabla(s, ratio, mom, fecha, frec)
-    numericas = ["Retorno %", "vs mercado (pp)", "Δ participación (pp)", "Relativo 1m %", "Relativo 3m %"]
-    st.dataframe(
-        tb.style.map(colorear_num, subset=numericas)
-                .map(lambda v: f"color: {COLOR_CUADRANTE.get(v, '')}; font-weight: 600", subset=["Cuadrante"])
-                .map(lambda v: f"color: {COLOR_FLUJO.get(v, '')}; font-weight: 600", subset=["Flujo"]),
-        hide_index=True, width="stretch", column_config={
-            "Retorno %": st.column_config.NumberColumn(format="%+.2f%%"),
-            "vs mercado (pp)": st.column_config.NumberColumn(format="%+.2f"),
-            "% al alza": st.column_config.ProgressColumn(format="%.0f%%", min_value=0, max_value=100),
-            "Vol. relativo": st.column_config.NumberColumn(format="%.2fx"),
-            "Part. volumen %": st.column_config.NumberColumn(format="%.1f%%"),
-            "Δ participación (pp)": st.column_config.NumberColumn(format="%+.2f"),
-            "Racha": st.column_config.NumberColumn(
-                format=f"%d {UNIDAD_FREC[frec]}",
-                help="Períodos seguidos con el mismo flujo. Uno solo puede ser ruido; varios seguidos es más confiable."),
-            "Relativo 1m %": st.column_config.NumberColumn(format="%+.1f%%"),
-            "Relativo 3m %": st.column_config.NumberColumn(format="%+.1f%%"),
-        })
-    st.caption(
-        "**vs mercado** = retorno del sector menos el del mercado · **% al alza** = parte de las empresas del "
-        "sector que subió (amplitud) · **Vol. relativo** = volumen en dólares del período / su promedio de los "
-        f"{sectores.VENTANA_VOL[frec]} anteriores · **Part. volumen** = parte del volumen en dólares del mercado que "
-        "se transó en el sector · **Δ participación** = participación actual menos su promedio: positivo = "
-        "está entrando más dinero que lo habitual · **Flujo** = **Entrando** si la Δ participación es positiva, **Saliendo** si es negativa; la **Racha** dice cuántos períodos seguidos lleva así · **Relativo 1m/3m** = cuánto le ganó (o perdió) al "
-        "mercado en ese plazo. Una rotación se ve como sectores con **vs mercado** y **Δ participación** "
-        "positivos (entra dinero y suben más que el resto) mientras otros pierden ambas cosas.")
+    with tab_rot:
+        frec = st.radio("Frecuencia", ["Diaria", "Semanal", "Mensual"], horizontal=True, key="frec_sect")
+        s, ratio, mom = datos_sectores(frec, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+        fechas = list(s["rs"].index[-60:])
+        en_curso = periodo_en_curso(fechas[-1], frec)
+        formato = {"Diaria": "{:%d-%b-%Y}", "Semanal": "semana al {:%d-%b-%Y}", "Mensual": "{:%b-%Y}"}[frec]
+        etiqueta = {f: formato.format(f)
+                       + (" (en curso)" if f == fechas[-1] and en_curso else "") for f in fechas}
+        fecha = st.select_slider("Período (muévelo para ver rotaciones pasadas)", options=fechas,
+                                 value=fechas[-2] if en_curso else fechas[-1],
+                                 format_func=lambda f: etiqueta[f])
+        if fecha == fechas[-1] and en_curso:
+            st.warning("Período en curso: el retorno es parcial y el volumen todavía está incompleto, así que "
+                       "el volumen relativo sale bajo. Para comparar volumen, usa el último período completo.")
 
-    st.subheader("Gráfico de rotación relativa (RRG)")
-    st.plotly_chart(grafico_rrg(ratio, mom, fecha), width="stretch")
-    ventana, rezago = sectores.RRG[frec]
-    st.caption(
-        f"Eje X: **RS-Ratio** = fuerza relativa del sector contra el mercado (sobre 100 = le gana a su "
-        f"promedio de {ventana} períodos). Eje Y: **RS-Momentum** = si esa fuerza acelera (sobre 100) o frena. "
-        "La cola muestra los últimos 6 períodos. Las rotaciones suelen avanzar en el sentido de las agujas del "
-        "reloj: **Mejorando → Liderando → Debilitándose → Rezagado**. Un sector que pasa de Rezagado a "
-        "Mejorando es candidato a recibir la próxima rotación.")
+        tb = sectores.tabla(s, ratio, mom, fecha, frec)
+        numericas = ["Retorno %", "vs mercado (pp)", "Δ participación (pp)", "Relativo 1m %", "Relativo 3m %"]
+        st.dataframe(
+            tb.style.map(colorear_num, subset=numericas)
+                    .map(lambda v: f"color: {COLOR_CUADRANTE.get(v, '')}; font-weight: 600", subset=["Cuadrante"])
+                    .map(lambda v: f"color: {COLOR_FLUJO.get(v, '')}; font-weight: 600", subset=["Flujo"]),
+            hide_index=True, width="stretch", column_config={
+                "Retorno %": st.column_config.NumberColumn(format="%+.2f%%"),
+                "vs mercado (pp)": st.column_config.NumberColumn(format="%+.2f"),
+                "% al alza": st.column_config.ProgressColumn(format="%.0f%%", min_value=0, max_value=100),
+                "Vol. relativo": st.column_config.NumberColumn(format="%.2fx"),
+                "Part. volumen %": st.column_config.NumberColumn(format="%.1f%%"),
+                "Δ participación (pp)": st.column_config.NumberColumn(format="%+.2f"),
+                "Racha": st.column_config.NumberColumn(
+                    format=f"%d {UNIDAD_FREC[frec]}",
+                    help="Períodos seguidos con el mismo flujo. Uno solo puede ser ruido; varios seguidos es más confiable."),
+                "Relativo 1m %": st.column_config.NumberColumn(format="%+.1f%%"),
+                "Relativo 3m %": st.column_config.NumberColumn(format="%+.1f%%"),
+            })
+        st.caption(
+            "**vs mercado** = retorno del sector menos el del mercado · **% al alza** = parte de las empresas del "
+            "sector que subió (amplitud) · **Vol. relativo** = volumen en dólares del período / su promedio de los "
+            f"{sectores.VENTANA_VOL[frec]} anteriores · **Part. volumen** = parte del volumen en dólares del mercado que "
+            "se transó en el sector · **Δ participación** = participación actual menos su promedio: positivo = "
+            "está entrando más dinero que lo habitual · **Flujo** = **Entrando** si la Δ participación es positiva, **Saliendo** si es negativa; la **Racha** dice cuántos períodos seguidos lleva así · **Relativo 1m/3m** = cuánto le ganó (o perdió) al "
+            "mercado en ese plazo. Una rotación se ve como sectores con **vs mercado** y **Δ participación** "
+            "positivos (entra dinero y suben más que el resto) mientras otros pierden ambas cosas.")
 
-    st.subheader("Mapa de calor: cómo ha ido rotando")
-    metrica = st.radio("Métrica", ["Retorno vs mercado (pp)", "Δ participación de volumen (pp)",
-                                   "Amplitud (% al alza)"], horizontal=True)
-    clave = {"Retorno vs mercado (pp)": "rel", "Δ participación de volumen (pp)": "d_part",
-             "Amplitud (% al alza)": "alza"}[metrica]
-    st.plotly_chart(grafico_calor(s[clave], fecha, frec, clave), width="stretch")
-    st.caption(f"Últimos {N_CALOR} períodos hasta el elegido. Verde = el sector le ganó al mercado / ganó "
-               "participación de volumen / subió la mayoría de sus empresas; rojo = lo contrario.")
+        st.subheader("Gráfico de rotación relativa (RRG)")
+        st.plotly_chart(grafico_rrg(ratio, mom, fecha), width="stretch")
+        ventana, rezago = sectores.RRG[frec]
+        st.caption(
+            f"Eje X: **RS-Ratio** = fuerza relativa del sector contra el mercado (sobre 100 = le gana a su "
+            f"promedio de {ventana} períodos). Eje Y: **RS-Momentum** = si esa fuerza acelera (sobre 100) o frena. "
+            "La cola muestra los últimos 6 períodos. Las rotaciones suelen avanzar en el sentido de las agujas del "
+            "reloj: **Mejorando → Liderando → Debilitándose → Rezagado**. Un sector que pasa de Rezagado a "
+            "Mejorando es candidato a recibir la próxima rotación.")
 
-    # ---- semana a semana / mes a mes, comparando el mismo tramo ----
-    st.divider()
-    st.header("Semana a semana y mes a mes")
-    c1, c2 = st.columns([1, 2])
-    per = c1.radio("Comparar", ["Mes", "Semana"], horizontal=True, key="tramo_periodo")
-    n_per = c2.select_slider("Períodos anteriores", [3, 4, 6, 8, 12], value=6 if per == "Mes" else 8, key=f"tramo_n_{per}")
-    tr = datos_tramos(per, n_per, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
-    k, et = tr["k"], tr["etiquetas"]
-    unidad = "del mes" if per == "Mes" else "de la semana"
-    st.caption(f"Van **{k} {'rueda' if k == 1 else 'ruedas'} {unidad}**: de cada {per.lower()} se toman solo sus primeras "
-               f"{k} ruedas, así se compara el mismo tramo (por ejemplo, del 1 al día de hoy de cada mes). "
-               f"La primera columna ({et[0]}) es el período en curso; su última rueda puede estar incompleta si la "
-               "sesión sigue abierta.")
+        st.subheader("Mapa de calor: cómo ha ido rotando")
+        metrica = st.radio("Métrica", ["Retorno vs mercado (pp)", "Δ participación de volumen (pp)",
+                                       "Amplitud (% al alza)"], horizontal=True)
+        clave = {"Retorno vs mercado (pp)": "rel", "Δ participación de volumen (pp)": "d_part",
+                 "Amplitud (% al alza)": "alza"}[metrica]
+        st.plotly_chart(grafico_calor(s[clave], fecha, frec, clave), width="stretch")
+        st.caption(f"Últimos {N_CALOR} períodos hasta el elegido. Verde = el sector le ganó al mercado / ganó "
+                   "participación de volumen / subió la mayoría de sus empresas; rojo = lo contrario.")
 
-    st.subheader("Ranking de los sectores en el mismo tramo")
-    rk = tr["rank"]
-    cambio = rk[et[1]] - rk[et[0]]
-    tabla_rk = rk.copy()
-    tabla_rk.insert(0, "Cambio", ["=" if c == 0 else (f"↑{c}" if c > 0 else f"↓{-c}") for c in cambio])
-    tabla_rk = tabla_rk.sort_values(et[0]).rename_axis("Sector").reset_index()
-    st.dataframe(
-        tabla_rk.style.map(color_rank(len(rk)), subset=et)
-                .map(lambda v: "color: #3ecf8e; font-weight: 600" if str(v).startswith("↑")
-                     else "color: #ef5a6f; font-weight: 600" if str(v).startswith("↓") else "", subset=["Cambio"]),
-        hide_index=True, width="stretch",
-        column_config={e: st.column_config.NumberColumn(e, format="%d°") for e in et})
-    st.caption(f"Puesto de cada sector según su retorno (pesos iguales) en las primeras {k} ruedas de cada período: "
-               f"1° = el que más subió. **Cambio** = cuántos puestos subió (↑) o bajó (↓) frente al mismo tramo "
-               f"{'del mes' if per == 'Mes' else 'de la semana'} anterior.")
-
-    st.subheader("Volumen: participación y flujo en el mismo tramo")
-    pa = tr["part"]
-    delta = pa[et[0]] - pa[et[1]]
-    signo = pa.iloc[:, ::-1].diff(axis=1).iloc[:, ::-1].drop(columns=et[-1])   # Δ de cada período vs el anterior
-    racha = []
-    for sec in pa.index:
-        d0 = np.sign(signo.loc[sec].iloc[0]); r = 0
-        for v in signo.loc[sec]:
-            if np.sign(v) == d0 and d0 != 0:
-                r += 1
+    with tab_tramo:
+        # se calcula solo con la pestaña abierta
+        if st.session_state.get("tabs_sectores") != pest_sect[1]:
+            st.caption("Abre esta pestaña para calcular la comparación.")
+        else:
+            c1, c2 = st.columns([1, 2])
+            per = c1.radio("Comparar", ["Mes", "Semana", "Día"], horizontal=True, key="tramo_periodo")
+            n_per = c2.select_slider("Períodos anteriores", [3, 4, 5, 6, 8, 10, 12, 20],
+                                  value={"Mes": 6, "Semana": 8, "Día": 5}[per], key=f"tramo_n_{per}")
+            tr = datos_tramos(per, n_per, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+            k, et = tr["k"], tr["etiquetas"]
+            unidad = {"Mes": "del mes", "Semana": "de la semana", "Día": ""}[per]
+            if per == "Día":
+                st.caption(f"Cada columna es **una rueda** (la primera, {et[0]}, es la más reciente; puede estar incompleta "
+                           "si la sesión sigue abierta). Sirve para seguir día a día cómo va la semana.")
             else:
-                break
-        racha.append(r)
-    tabla_v = pd.DataFrame({"Sector": pa.index, "Flujo": np.where(delta > 0, "Entrando", "Saliendo"),
-                            "Δ participación (pp)": delta.values, "Racha": racha})
-    tabla_v = pd.concat([tabla_v, pa.reset_index(drop=True)], axis=1).sort_values("Δ participación (pp)", ascending=False)
-    st.dataframe(
-        tabla_v.style.map(colorear_num, subset=["Δ participación (pp)"])
-               .map(lambda v: f"color: {COLOR_FLUJO.get(v, '')}; font-weight: 600", subset=["Flujo"]),
-        hide_index=True, width="stretch",
-        column_config={"Δ participación (pp)": st.column_config.NumberColumn(format="%+.2f"),
-                       "Racha": st.column_config.NumberColumn(format=f"%d {'meses' if per == 'Mes' else 'sem.'}",
-                                                              help="Períodos seguidos con el mismo flujo, comparando siempre el mismo tramo."),
-                       **{e: st.column_config.NumberColumn(e, format="%.1f%%") for e in et}})
-    st.caption(f"**Participación** = parte del volumen en dólares del universo que se transó en el sector durante las "
-               f"primeras {k} ruedas de cada período. **Δ participación** = {et[0]} menos {et[1]} (mismo tramo). "
-               "**Flujo** = **Entrando** si el sector ganó participación, **Saliendo** si la perdió; la **Racha** dice "
-               "cuántos períodos seguidos lleva así.")
+                st.caption(f"Van **{k} {'rueda' if k == 1 else 'ruedas'} {unidad}**: de cada {per.lower()} se toman solo sus primeras "
+                           f"{k} ruedas, así se compara el mismo tramo (por ejemplo, del 1 al día de hoy de cada mes). "
+                           f"La primera columna ({et[0]}) es el período en curso; su última rueda puede estar incompleta si la "
+                           "sesión sigue abierta.")
 
-    # ---- riesgo vs refugio, momentum y macro (siempre con datos diarios) ----
-    st.divider()
-    st.header("Qué está moviendo la rotación")
-    ventana_m = st.radio("Ventana", ["6M", "1A", "2A", "5A"], index=1, horizontal=True, key="ventana_macro")
-    desde = pd.Timestamp.now().normalize() - pd.DateOffset(months={"6M": 6, "1A": 12, "2A": 24, "5A": 60}[ventana_m])
-    sd, _, _ = datos_sectores("Diaria", tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
-    macro, err_m = cargar_macro(VERSION_OPCIONES)
-    if err_m:
-        st.caption(f"Algunas series macro no se pudieron cargar: {err_m}")
+            st.subheader("Ranking de los sectores en el mismo tramo")
+            rk = tr["rank"]
+            cambio = rk[et[1]] - rk[et[0]]
+            tabla_rk = rk.copy()
+            tabla_rk.insert(0, "Cambio", ["=" if c == 0 else (f"↑{c}" if c > 0 else f"↓{-c}") for c in cambio])
+            tabla_rk = tabla_rk.sort_values(et[0]).rename_axis("Sector").reset_index()
+            st.dataframe(
+                tabla_rk.style.map(color_rank(len(rk)), subset=et)
+                        .map(lambda v: "color: #3ecf8e; font-weight: 600" if str(v).startswith("↑")
+                             else "color: #ef5a6f; font-weight: 600" if str(v).startswith("↓") else "", subset=["Cambio"]),
+                hide_index=True, width="stretch",
+                column_config={e: st.column_config.NumberColumn(e, format="%d°") for e in et})
+            st.caption(f"Puesto de cada sector según su retorno (pesos iguales) {'en cada rueda' if per == 'Día' else f'en las primeras {k} ruedas de cada período'}: "
+                       f"1° = el que más subió. **Cambio** = cuántos puestos subió (↑) o bajó (↓) frente al mismo tramo "
+                       f"{ {'Mes': 'del mes', 'Semana': 'de la semana', 'Día': 'de la rueda'}[per] } anterior.")
 
-    od = sectores.ofensivo_defensivo(sd["ret"])
-    m = st.columns(1 + len(macro))
-    od_v = od[od.index >= desde]
-    m[0].metric("Ofensivos / defensivos", f"{(od_v.iloc[-1] / od_v.iloc[0] - 1) * 100:+.1f}%",
-                f"{(od.iloc[-1] / od.iloc[-6] - 1) * 100:+.1f}% en 1 sem.",
-                help="Cuánto le han ganado los ofensivos a los defensivos en la ventana elegida.")
-    for col, (nombre, serie) in zip(m[1:], macro.items()):
-        cambio = (serie.iloc[-1] - serie.iloc[-6]) if nombre.startswith("Tasa") else \
-            (serie.iloc[-1] / serie.iloc[-6] - 1) * 100
-        col.metric(nombre, f"{serie.iloc[-1]:,.2f}",
-                   f"{cambio:+.2f} pp en 1 sem." if nombre.startswith("Tasa") else f"{cambio:+.1f}% en 1 sem.",
-                   delta_color="off")
-    st.plotly_chart(grafico_riesgo_macro(od, macro, desde), width="stretch")
-    st.caption(
-        f"**Ofensivos / defensivos** = {', '.join(sectores.OFENSIVOS)} contra "
-        f"{', '.join(sectores.DEFENSIVOS)} (pesos iguales), base 100 al inicio de la ventana. Sube = el mercado "
-        "busca riesgo; baja = busca refugio. Es la rotación más marcada en los datos: Tecnología y los "
-        "defensivos se mueven casi siempre en sentidos opuestos. La línea punteada es su promedio de 50 días. "
-        "Debajo, los motores macro: **tasa del bono a 10 años**, **petróleo WTI**, **VIX** (miedo esperado) y "
-        "**DXY** (fuerza del dólar).")
+            st.subheader("Volumen: participación y flujo en el mismo tramo")
+            pa = tr["part"]
+            delta = pa[et[0]] - pa[et[1]]
+            signo = pa.iloc[:, ::-1].diff(axis=1).iloc[:, ::-1].drop(columns=et[-1])   # Δ de cada período vs el anterior
+            racha = []
+            for sec in pa.index:
+                d0 = np.sign(signo.loc[sec].iloc[0]); r = 0
+                for v in signo.loc[sec]:
+                    if np.sign(v) == d0 and d0 != 0:
+                        r += 1
+                    else:
+                        break
+                racha.append(r)
+            tabla_v = pd.DataFrame({"Sector": pa.index, "Flujo": np.where(delta > 0, "Entrando", "Saliendo"),
+                                    "Δ participación (pp)": delta.values, "Racha": racha})
+            tabla_v = pd.concat([tabla_v, pa.reset_index(drop=True)], axis=1).sort_values("Δ participación (pp)", ascending=False)
+            st.dataframe(
+                tabla_v.style.map(colorear_num, subset=["Δ participación (pp)"])
+                       .map(lambda v: f"color: {COLOR_FLUJO.get(v, '')}; font-weight: 600", subset=["Flujo"]),
+                hide_index=True, width="stretch",
+                column_config={"Δ participación (pp)": st.column_config.NumberColumn(format="%+.2f"),
+                               "Racha": st.column_config.NumberColumn(format=f"%d { {'Mes': 'meses', 'Semana': 'sem.', 'Día': 'días'}[per] }",
+                                                                      help="Períodos seguidos con el mismo flujo, comparando siempre el mismo tramo."),
+                               **{e: st.column_config.NumberColumn(e, format="%.1f%%") for e in et}})
+            st.caption(f"**Participación** = parte del volumen en dólares del universo que se transó en el sector durante "
+                       f"{'cada rueda' if per == 'Día' else f'las primeras {k} ruedas de cada período'}. **Δ participación** = {et[0]} menos {et[1]}{'' if per == 'Día' else ' (mismo tramo)'}. "
+                       "**Flujo** = **Entrando** si el sector ganó participación, **Saliendo** si la perdió; la **Racha** dice "
+                       "cuántos períodos seguidos lleva así.")
 
-    c_mom, c_sens = st.columns([2, 3])
-    with c_mom:
-        st.subheader("Momentum de los sectores")
-        mom_t = sectores.momentum(sd["rs"])
-        plazos = list(sectores.PLAZOS_MOMENTUM)
-        st.dataframe(mom_t.style.map(colorear_num, subset=plazos), hide_index=True, width="stretch",
-                     column_config={p: st.column_config.NumberColumn(format="%+.1f%%") for p in plazos})
-        st.caption("Cuánto le ganó (o perdió) cada sector al mercado en cada plazo. A un mes hay algo de "
-                   "persistencia: el sector que viene ganando tiende a seguir ganando un poco el mes siguiente. "
-                   "A una semana, no.")
-    with c_sens:
-        st.subheader("Sensibilidad a la macro")
-        if not macro:
-            st.caption("Sin series macro disponibles en este momento.")
-            st.stop()
-        sens = sectores.sensibilidad_macro(sd["rel"][sd["rel"].index >= desde],
-                                           {k: v[v.index >= desde - pd.Timedelta(days=10)] for k, v in macro.items()})
-        st.dataframe(sens.style.map(colorear_num).format("{:+.2f}"), width="stretch")
-        st.caption("Correlación entre el retorno semanal del sector **contra el mercado** y el cambio semanal de "
-                   "cada variable, en la ventana elegida (de −1 a +1). Ejemplo: positiva con la tasa = el sector "
-                   "le gana al mercado las semanas en que suben las tasas. Con ventanas cortas hay pocas semanas: "
-                   "léelo como una guía, no como algo exacto.")
+    with tab_mueve:
+        if st.session_state.get("tabs_sectores") != pest_sect[2]:
+            st.caption("Abre esta pestaña para calcular los factores.")
+        else:
+            ventana_m = st.radio("Ventana", ["6M", "1A", "2A", "5A"], index=1, horizontal=True, key="ventana_macro")
+            desde = pd.Timestamp.now().normalize() - pd.DateOffset(months={"6M": 6, "1A": 12, "2A": 24, "5A": 60}[ventana_m])
+            sd, _, _ = datos_sectores("Diaria", tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+            macro, err_m = cargar_macro(VERSION_OPCIONES)
+            if err_m:
+                st.caption(f"Algunas series macro no se pudieron cargar: {err_m}")
+
+            od = sectores.ofensivo_defensivo(sd["ret"])
+            m = st.columns(1 + len(macro))
+            od_v = od[od.index >= desde]
+            m[0].metric("Ofensivos / defensivos", f"{(od_v.iloc[-1] / od_v.iloc[0] - 1) * 100:+.1f}%",
+                        f"{(od.iloc[-1] / od.iloc[-6] - 1) * 100:+.1f}% en 1 sem.",
+                        help="Cuánto le han ganado los ofensivos a los defensivos en la ventana elegida.")
+            for col, (nombre, serie) in zip(m[1:], macro.items()):
+                cambio = (serie.iloc[-1] - serie.iloc[-6]) if nombre.startswith("Tasa") else \
+                    (serie.iloc[-1] / serie.iloc[-6] - 1) * 100
+                col.metric(nombre, f"{serie.iloc[-1]:,.2f}",
+                           f"{cambio:+.2f} pp en 1 sem." if nombre.startswith("Tasa") else f"{cambio:+.1f}% en 1 sem.",
+                           delta_color="off")
+            st.plotly_chart(grafico_riesgo_macro(od, macro, desde), width="stretch")
+            st.caption(
+                f"**Ofensivos / defensivos** = {', '.join(sectores.OFENSIVOS)} contra "
+                f"{', '.join(sectores.DEFENSIVOS)} (pesos iguales), base 100 al inicio de la ventana. Sube = el mercado "
+                "busca riesgo; baja = busca refugio. Es la rotación más marcada en los datos: Tecnología y los "
+                "defensivos se mueven casi siempre en sentidos opuestos. La línea punteada es su promedio de 50 días. "
+                "Debajo, los motores macro: **tasa del bono a 10 años**, **petróleo WTI**, **VIX** (miedo esperado) y "
+                "**DXY** (fuerza del dólar).")
+
+            c_mom, c_sens = st.columns([2, 3])
+            with c_mom:
+                st.subheader("Momentum de los sectores")
+                mom_t = sectores.momentum(sd["rs"])
+                plazos = list(sectores.PLAZOS_MOMENTUM)
+                st.dataframe(mom_t.style.map(colorear_num, subset=plazos), hide_index=True, width="stretch",
+                             column_config={p: st.column_config.NumberColumn(format="%+.1f%%") for p in plazos})
+                st.caption("Cuánto le ganó (o perdió) cada sector al mercado en cada plazo. A un mes hay algo de "
+                           "persistencia: el sector que viene ganando tiende a seguir ganando un poco el mes siguiente. "
+                           "A una semana, no.")
+            with c_sens:
+                st.subheader("Sensibilidad a la macro")
+                if not macro:
+                    st.caption("Sin series macro disponibles en este momento.")
+                    st.stop()
+                sens = sectores.sensibilidad_macro(sd["rel"][sd["rel"].index >= desde],
+                                                   {k: v[v.index >= desde - pd.Timedelta(days=10)] for k, v in macro.items()})
+                st.dataframe(sens.style.map(colorear_num).format("{:+.2f}"), width="stretch")
+                st.caption("Correlación entre el retorno semanal del sector **contra el mercado** y el cambio semanal de "
+                           "cada variable, en la ventana elegida (de −1 a +1). Ejemplo: positiva con la tasa = el sector "
+                           "le gana al mercado las semanas en que suben las tasas. Con ventanas cortas hay pocas semanas: "
+                           "léelo como una guía, no como algo exacto.")
 
 
-# ---------------------------------------------------------------------------
-# Vista empresa
-# ---------------------------------------------------------------------------
+        # ---------------------------------------------------------------------------
+        # Vista empresa
+        # ---------------------------------------------------------------------------
+
 
 else:
     lista = filtrado["Ticker"].tolist()

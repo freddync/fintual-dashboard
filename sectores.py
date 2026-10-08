@@ -142,6 +142,7 @@ def tabla(s, ratio, mom, fecha, frecuencia):
 # ---------------------------------------------------------------------------
 
 MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
 
 
 def tramos(cierre, dolares, sector_de, periodo, n):
@@ -158,13 +159,18 @@ def tramos(cierre, dolares, sector_de, periodo, n):
     ret_sec = ret.T.groupby(sector_de).mean().T
     dv_sec = dolares.T.groupby(sector_de).sum(min_count=1).T
     idx = ret_sec.dropna(how="all").index
-    clave = pd.Series(idx.to_period("M" if periodo == "Mes" else "W-FRI"), index=idx)
+    if periodo == "Día":
+        clave = pd.Series(idx, index=idx)                          # cada rueda es su propio período
+    else:
+        clave = pd.Series(idx.to_period("M" if periodo == "Mes" else "W-FRI"), index=idx)
     grupos = list(dict.fromkeys(clave))[-(n + 1):][::-1]          # en curso primero
     k = int((clave == grupos[0]).sum())
     R, P, etiquetas = {}, {}, []
     for g in grupos:
         dias = clave.index[clave == g][:k]
-        if periodo == "Mes":
+        if periodo == "Día":
+            et = f"{DIAS[g.dayofweek]} {g.day:02d}-{MESES[g.month - 1]}"
+        elif periodo == "Mes":
             et = f"{MESES[g.month - 1]}-{str(g.year)[2:]}"
         else:
             ini = g.start_time + pd.Timedelta(days=2)   # el período W-FRI parte el sábado: la etiqueta usa el lunes
