@@ -547,7 +547,7 @@ COLUMNAS = {
 }
 
 
-PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento", "Señales", "Hoy"]   # para el botón de volver
+PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento", "Hoy"]   # para el botón de volver
 
 
 # Señales que se ordenan por su significado y no alfabéticamente
@@ -901,14 +901,14 @@ if vista == "General":
                f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}: **Cruce alcista** = el MACD cruzó sobre su señal en la última sesión con ambas líneas bajo cero · **Pre-cruce** = histograma negativo pero subiendo, también con ambas bajo cero.")
 
     sobreventa = filtrado[filtrado[COL_RSI] < RSI_BAJO]
-    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento", "🎯 Señales", "🛒 Hoy"]
+    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento", "🛒 Hoy"]
     # al volver desde una empresa se abre la pestaña de donde se vino
     destino = st.session_state.pop("_ir_a_pestana", None)
-    if destino is not None:
+    if destino is not None and destino < len(etiquetas):
         st.session_state["pestanas"] = etiquetas[destino]
     if st.session_state.get("pestanas") not in etiquetas:   # el conteo del título cambió
         st.session_state.pop("pestanas", None)
-    tab_todas, tab_rsi, tab_seg, tab_sen, tab_hoy = st.tabs(etiquetas, key="pestanas", on_change="rerun")
+    tab_todas, tab_rsi, tab_seg, tab_hoy = st.tabs(etiquetas, key="pestanas", on_change="rerun")
 
     with tab_todas:
         mostrar_tabla(filtrado, "tabla_general", 0)
@@ -949,60 +949,6 @@ if vista == "General":
             st.caption("⚠️ Guardado en data/seguimiento.json (archivo local). En Streamlit Cloud se pierde "
                        "al redeployar: configura los secrets [seguimiento] gist_id y token.")
 
-    with tab_sen:
-        # se calcula solo cuando la pestaña está abierta (el cálculo tarda unos segundos)
-        if st.session_state.get("pestanas") != "🎯 Señales":
-            st.caption("Abre esta pestaña para calcular las señales.")
-        else:
-            st.caption(
-                f"Señal: **MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL} golden cross por abajo + {COL_RSI} bajo el "
-                "umbral, el mismo día**. Umbral por sector: " +
-                " · ".join(f"**{COL_RSI} < {u}**: " + ", ".join(x for x, v in UMBRAL_SECTOR.items() if v == u)
-                           for u in sorted(set(UMBRAL_SECTOR.values()))) +
-                ". Fuera: Salud, Servicios de comunicación y señales con el sector **Debilitándose**. "
-                f"**Filtro SMA {SMA_LARGA}**: las cíclicas ({', '.join(sorted(CICLICOS))}) solo si el precio está "
-                f"**bajo** su SMA {SMA_LARGA}; las demás solo si está **sobre** ella. "
-                f"⭐ = sector **Mejorando** (el mejor contexto). Venta: {COL_RSI} > {RSI_ALTO}. Compra y venta "
-                "en la apertura del día siguiente a la señal.")
-            sen = senales_config(tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
-            if sector != "Todos" and not sen.empty:
-                sen = sen[sen["Sector"] == sector]
-            if sen.empty:
-                st.info("No hay señales con la configuración y los filtros actuales.")
-            else:
-                sesiones = sorted(sen["Señal"].unique(), reverse=True)
-                n_ses = st.select_slider("Mostrar señales de las últimas", [5, 10, 20, 60, 120], value=20,
-                                         format_func=lambda n: f"{n} sesiones con señal")
-                ventana_s = sen[sen["Señal"] >= sesiones[min(n_ses, len(sesiones)) - 1]]
-                ult = sen["Señal"].max()
-                provisional = periodo_en_curso(ult, "Diaria")
-                t = tabla_senales(ventana_s, data.set_index("Ticker")["Nombre"], provisional, ult)
-                nuevas = (ventana_s["Señal"] == ult).sum()
-                abiertas = ventana_s["Abierta"] & ~ventana_s["Pendiente"]
-                cerr = ~ventana_s["Abierta"]
-                vend = ventana_s.loc[cerr, "Retorno %"]
-                k = st.columns(5)
-                k[0].metric(f"Señales del {ult:%d-%b}", f"{nuevas}",
-                            "provisionales: la sesión sigue abierta" if provisional else None, delta_color="off")
-                k[1].metric("Posiciones abiertas", f"{abiertas.sum()}")
-                k[2].metric("Retorno prom. abiertas", f"{ventana_s.loc[abiertas, 'Retorno %'].mean():+.2f}%"
-                            if abiertas.any() else "—", "aún sin vender", delta_color="off")
-                k[3].metric("Retorno prom. vendidas", f"{vend.mean():+.2f}%" if len(vend) else "—",
-                            f"{len(vend)} vendidas · mediana {vend.median():+.2f}%" if len(vend) else None,
-                            delta_color="off",
-                            help="Retorno de las posiciones ya cerradas (compra → venta), descontando 0,1% de costo.")
-                k[4].metric("Vendidas ganadoras", f"{(vend > 0).mean() * 100:.0f}%" if len(vend) else "—",
-                            f"mejor {vend.max():+.1f}% · peor {vend.min():+.1f}%" if len(vend) else None,
-                            delta_color="off")
-                mostrar_tabla(t, "tabla_senales", 3, height=min(650, 38 + 35 * len(t)))
-                st.caption(
-                    "**Estado**: 🟢 señal de la última sesión, se compra en la próxima apertura · 🟡 señal de la "
-                    "sesión en curso: puede desaparecer antes del cierre · 🔵 comprada, esperando la venta · "
-                    f"🔴 el {COL_RSI} ya pasó {RSI_ALTO}: se vende en la próxima apertura · ⚪ ya vendida. "
-                    "**Retorno %** = desde la compra hasta el precio actual (o la venta), descontando 0,1% de "
-                    "costo. Una empresa no repite señal mientras su posición anterior siga abierta. Es la "
-                    "aplicación de un backtest, no una recomendación de inversión.")
-
     with tab_hoy:
         if st.session_state.get("pestanas") != "🛒 Hoy":
             st.caption("Abre esta pestaña para calcular las órdenes del día.")
@@ -1042,7 +988,7 @@ if vista == "General":
                     tc = tc[["Ticker", "Nombre", "Sector", "Estado", "vs sector 5d", "RSI señal", "Umbral",
                              "vs SMA 200 %", "Cuadrante sector", "Flujo sector", "Precio actual / venta"]].rename(
                         columns={"Precio actual / venta": "Último cierre"})
-                    mostrar_tabla(tc, "tabla_compras", 4, height=min(450, 38 + 35 * len(tc)))
+                    mostrar_tabla(tc, "tabla_compras", 3, height=min(450, 38 + 35 * len(tc)))
                     st.caption(f"Regla: la compra se hace en la **apertura siguiente** a la señal del {ult:%d-%b}. "
                                "Primero van las de sector ⭐ Mejorando (el contexto que mejor rindió) y luego por "
                                f"{COL_RSI} más bajo. **Último cierre** es referencial: el precio real será el de la "
@@ -1062,7 +1008,7 @@ if vista == "General":
                     tv = tv[["Ticker", "Nombre", "Sector", "Fecha señal", "Compra", "Precio compra",
                              "Precio actual / venta", "Retorno %", "Días"]].rename(
                         columns={"Precio actual / venta": "Último cierre"})
-                    mostrar_tabla(tv, "tabla_ventas", 4, height=min(450, 38 + 35 * len(tv)))
+                    mostrar_tabla(tv, "tabla_ventas", 3, height=min(450, 38 + 35 * len(tv)))
                     st.caption(f"Posiciones de la regla cuyo {COL_RSI} cerró sobre {RSI_ALTO}: la venta se hace en "
                                "la apertura siguiente. Solo aplica si compraste esa posición siguiendo la regla.")
 
@@ -1400,6 +1346,9 @@ elif vista == "Sectores":
 
 else:
     lista = filtrado["Ticker"].tolist()
+    actual = st.session_state.get("ticker")
+    if actual in set(data["Ticker"]) and actual not in lista:
+        lista = [actual] + lista   # abierta desde una tabla que no usa los filtros (p. ej. Seguimiento o Mi cartera)
     if not lista:
         st.warning("No hay empresas con el filtro actual.")
         st.stop()
@@ -1410,7 +1359,7 @@ else:
     ci = info.get(ticker, {})
 
     origen = ("Mi cartera" if st.session_state.get("_vista_origen") == "Mi cartera"
-              else PESTANAS[st.session_state.get("_pestana_origen", 0)])
+              else PESTANAS[min(st.session_state.get("_pestana_origen", 0), len(PESTANAS) - 1)])
     if st.button(f"← Volver a {origen}"):
         st.session_state["_volver"] = True
         st.rerun()
