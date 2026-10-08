@@ -647,6 +647,22 @@ CICLICOS = {"Tecnología", "Industrial", "Consumo discrecional", "Financiero"}
 SMA_LARGA = 200
 
 
+def con_estado_sector(df, universos):
+    """Agrega 'Cuadrante sector' y 'Flujo sector' (estado actual, RRG diario de la última sesión)
+    justo después de la columna Sector. Mismo criterio que la pestaña Hoy (⭐ = Mejorando)."""
+    s, ratio, mom = datos_sectores("Diaria", universos, json.dumps(sello), VERSION_OPCIONES)
+    f = ratio.dropna(how="all").index[-1]
+    cuad = {sec: sectores.cuadrante(ratio.at[f, sec], mom.at[f, sec]) for sec in ratio.columns}
+    dp = s["d_part"].loc[f]
+    flujo = {sec: "Entrando" if v > 0 else "Saliendo" if v <= 0 else "Sin datos" for sec, v in dp.items()}
+    df = df.copy()
+    i = df.columns.get_loc("Sector") + 1
+    df.insert(i, "Cuadrante sector", [("⭐ " if cuad.get(x) == "Mejorando" else "") + cuad.get(x, "Sin datos")
+                                      for x in df["Sector"]])
+    df.insert(i + 1, "Flujo sector", [flujo.get(x, "Sin datos") for x in df["Sector"]])
+    return df
+
+
 REZAGO_FUERTE = -5   # pp bajo el sector en 5 días: en el backtest, el grupo de mejor rebote
 
 
@@ -911,7 +927,7 @@ if vista == "General":
     tab_todas, tab_rsi, tab_seg, tab_hoy = st.tabs(etiquetas, key="pestanas", on_change="rerun")
 
     with tab_todas:
-        mostrar_tabla(filtrado, "tabla_general", 0)
+        mostrar_tabla(con_estado_sector(filtrado, tuple(sorted(sel_uni))), "tabla_general", 0)
         st.caption("P/E con EPS diluido de los últimos 4 trimestres. EV/EBITDA con el último año fiscal. "
                    "Crecimiento y margen del último año fiscal.")
 
@@ -919,7 +935,7 @@ if vista == "General":
         if sobreventa.empty:
             st.info(f"Ninguna empresa del filtro actual tiene {COL_RSI} bajo {RSI_BAJO}.")
         else:
-            mostrar_tabla(sobreventa.sort_values(COL_RSI), "tabla_rsi", 1)
+            mostrar_tabla(con_estado_sector(sobreventa.sort_values(COL_RSI), tuple(sorted(sel_uni))), "tabla_rsi", 1)
 
     with tab_seg:
         seg = leer_seguimiento()
@@ -941,7 +957,11 @@ if vista == "General":
             t.insert(4, "Agregada", t["Ticker"].map(lambda x: seg[x]["fecha"]))
             t.insert(5, "Precio al agregar", t["Ticker"].map(lambda x: seg[x]["precio"]))
             t.insert(7, "Desde que se agregó %", (t["Precio"] / t["Precio al agregar"] - 1) * 100)
+            t = con_estado_sector(t, tuple(sorted(sel_uni)))
             mostrar_tabla(t, "tabla_seg", 2, height=min(650, 38 + 35 * len(t)))
+            st.caption("**Cuadrante sector** y **Flujo sector**: estado actual del sector de cada empresa en la "
+                       "rotación diaria (vista Sectores). ⭐ Mejorando = el contexto en que mejor rindió la señal; "
+                       "Flujo = si el sector está ganando o perdiendo participación en el volumen transado.")
         if config_gist()[0]:
             st.caption("✅ Guardado en GitHub Gist: se mantiene entre sesiones y dispositivos. "
                        "No depende de los filtros del panel izquierdo.")
