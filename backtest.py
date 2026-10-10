@@ -60,6 +60,19 @@ def rsi(close, period):
     return out
 
 
+def rsi_estado(close, period):
+    """(ganancia promedio, pérdida promedio) de Wilder al último día: con eso se calcula el RSI de mañana."""
+    delta = np.diff(close, prepend=np.nan)
+    gan, per = np.clip(delta, 0, None), np.clip(-delta, 0, None)
+    if len(close) <= period:
+        return np.nan, np.nan
+    g, p = gan[1:period + 1].mean(), per[1:period + 1].mean()
+    for i in range(period + 1, len(close)):
+        g = (g * (period - 1) + gan[i]) / period
+        p = (p * (period - 1) + per[i]) / period
+    return g, p
+
+
 def _macd(cierre):
     rapida, lenta, sen = MACD
     c = pd.Series(cierre)
@@ -114,13 +127,17 @@ def senal_compra(cierre, r, entrada, compra, ventana):
 
 
 def operaciones(ticker, df, periodo=5, compra=30, venta=70, costo=0.1, entrada="rsi", ventana=10,
-                salida="rsi"):
-    """Lista de operaciones de una empresa."""
+                salida="rsi", filtro=None):
+    """Lista de operaciones de una empresa. `filtro` (opcional): arreglo booleano alineado con `df`
+    con los días en que se permite abrir posición; se aplica ANTES de abrirla, así una señal
+    descartada no ocupa la acción ni bloquea señales posteriores."""
     fechas = df["Date"].to_numpy()
     aper = df["Open"].to_numpy(dtype=float)
     cierre = df["Close"].to_numpy(dtype=float)
     r = rsi(cierre, periodo)
     comprar = senal_compra(cierre, r, entrada, compra, ventana)
+    if filtro is not None:
+        comprar = comprar & np.asarray(filtro, dtype=bool)
     vender = senal_venta(cierre, r, salida, venta)
     n = len(df)
     ops, i_ent = [], None
@@ -176,11 +193,12 @@ def base_por_dias(df, dias):
 
 
 def correr(precios, sector_de, periodo=5, compra=30, venta=70, costo=0.1, entrada="rsi", ventana=10,
-           salida="rsi"):
+           salida="rsi", filtros=None):
     """Operaciones de todas las empresas, con su base y su sector."""
     filas = []
     for t, df in precios.items():
-        ops = operaciones(t, df, periodo, compra, venta, costo, entrada, ventana, salida)
+        ops = operaciones(t, df, periodo, compra, venta, costo, entrada, ventana, salida,
+                          None if filtros is None else filtros.get(t))
         if not ops:
             continue
         base = base_por_dias(df, [o["Días"] for o in ops])

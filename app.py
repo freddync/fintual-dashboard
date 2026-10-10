@@ -547,7 +547,7 @@ COLUMNAS = {
 }
 
 
-PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento", "Hoy"]   # para el botón de volver
+PESTANAS = ["la lista", f"{COL_RSI} < {RSI_BAJO}", "Seguimiento", "Señal de hoy", "A punto de dar señal", "Forward test"]   # para el botón de volver
 
 
 # Señales que se ordenan por su significado y no alfabéticamente
@@ -707,35 +707,104 @@ def vs_sector_5d(universos, _sello_key, version=""):
     return out
 
 
+def debilitandose(universos, _sello_key, version=""):
+    """DataFrame fechas x sectores: True los días en que el sector está en el cuadrante Debilitándose."""
+    _, ratio, mom = datos_sectores("Diaria", universos, _sello_key, version)
+    return (ratio >= 100) & (mom < 100)
+
+
 @st.cache_data(show_spinner="Buscando señales...")
 def senales_config(universos, _sello_key, version=""):
-    """Todas las señales de la configuración, cada una con su seguimiento (abierta, vendida...)."""
+    """Todas las señales de la configuración, cada una con su seguimiento (abierta, vendida...).
+    Los filtros (sector no Debilitándose, SMA 200 por tipo de acción) se aplican ANTES de abrir la
+    posición, igual que en el backtest: una señal descartada no ocupa la acción."""
+    info_ = cargar_info()
+    deb = debilitandose(universos, _sello_key, version)
+    s_, ratio, mom = datos_sectores("Diaria", universos, _sello_key, version)
     partes = []
     for u in sorted(set(UMBRAL_SECTOR.values())):
-        o = correr_backtest(u, RSI_ALTO, 0.1, universos, _sello_key, version, "macd_y_rsi", 10)
-        if not o.empty:
-            sect = [x for x, v in UMBRAL_SECTOR.items() if v == u]
-            partes.append(o[o["Sector"].isin(sect)].assign(Umbral=u))
+        sect = {x for x, v in UMBRAL_SECTOR.items() if v == u}
+        precios, filtros, sec_de = {}, {}, {}
+        for t, i in info_.items():
+            if i.get("universe") not in universos or i.get("sector") not in sect or (df := cargar_precios(t)) is None:
+                continue
+            fechas = df["Date"]
+            cierre = df["Close"]
+            sma = cierre.rolling(SMA_LARGA).mean()
+            cond_sma = (cierre < sma) if i["sector"] in CICLICOS else (cierre > sma)
+            debil = (deb[i["sector"]].reindex(fechas).fillna(False).to_numpy(dtype=bool)
+                     if i["sector"] in deb.columns else np.zeros(len(df), dtype=bool))
+            precios[t], sec_de[t] = df, i["sector"]
+            filtros[t] = cond_sma.fillna(False).to_numpy(dtype=bool) & ~debil
+        if precios:
+            o = backtest.correr(precios, sec_de, RSI_PERIOD, u, RSI_ALTO, 0.1, "macd_y_rsi", 10, filtros=filtros)
+            if not o.empty:
+                partes.append(backtest.agregar_sector(o, s_, ratio, mom).assign(Umbral=u))
     if not partes:
         return pd.DataFrame()
     o = pd.concat(partes)
-    o = o[~o["Cuadrante sector"].isin(CUADRANTES_EXCLUIDOS)].copy()
-    # distancia del cierre del día de la señal a la SMA 200
-    dist, smas = [], {}
+    dist = []
     for t, f, c_ in zip(o["Ticker"], o["Señal"], o["Cierre señal"]):
-        if t not in smas:
-            df_t = cargar_precios(t)
-            smas[t] = (df_t.set_index("Date")["Close"].rolling(SMA_LARGA).mean() if df_t is not None
-                       else pd.Series(dtype=float))
-        sma = smas[t].get(f, np.nan)
+        sma = cargar_precios(t).set_index("Date")["Close"].rolling(SMA_LARGA).mean().get(f, np.nan)
         dist.append((c_ / sma - 1) * 100 if pd.notna(sma) and sma else np.nan)
     o["vs SMA 200 %"] = dist
-    ciclica = o["Sector"].isin(CICLICOS)
-    o = o[(ciclica & (o["vs SMA 200 %"] < 0)) | (~ciclica & (o["vs SMA 200 %"] > 0))]
     rel = vs_sector_5d(universos, _sello_key, version)
     o["vs sector 5d"] = [rel.at[f, t] if (f in rel.index and t in rel.columns) else np.nan
                          for t, f in zip(o["Ticker"], o["Señal"])]
     return o.sort_values(["Señal", "Ticker"], ascending=[False, True])
+
+
+@st.cache_data(show_spinner="Buscando acciones a punto de dar señal...")
+def a_punto_senal(universos, _sello_key, version=""):
+    """Acciones que pueden dar la señal en la PRÓXIMA rueda: existe un rango de cierre que hace cruzar
+    el MACD por abajo (ambas líneas bajo cero) manteniendo el RSI bajo el umbral del sector y el filtro
+    de SMA 200. Se calcula con las fórmulas exactas de las medias exponenciales y del RSI de Wilder."""
+    info_ = cargar_info()
+    deb = debilitandose(universos, _sello_key, version)
+    af, as_, asg = 2 / (MACD_FAST + 1), 2 / (MACD_SLOW + 1), 2 / (MACD_SIGNAL + 1)
+    filas = []
+    for t, i in info_.items():
+        sec_ = i.get("sector")
+        if i.get("universe") not in universos or sec_ not in UMBRAL_SECTOR or (df := cargar_precios(t)) is None:
+            continue
+        if len(df) < SMA_LARGA + 5 or (sec_ in deb.columns and bool(deb[sec_].iloc[-1])):
+            continue
+        c = df["Close"].astype(float)
+        ef = c.ewm(span=MACD_FAST, adjust=False).mean().iloc[-1]
+        es = c.ewm(span=MACD_SLOW, adjust=False).mean().iloc[-1]
+        linea = c.ewm(span=MACD_FAST, adjust=False).mean() - c.ewm(span=MACD_SLOW, adjust=False).mean()
+        senal = linea.ewm(span=MACD_SIGNAL, adjust=False).mean()
+        hist = linea.iloc[-1] - senal.iloc[-1]
+        if not (hist < 0 and senal.iloc[-1] < 0):
+            continue                      # ya cruzó (o está sobre cero): no es "a punto"
+        sg = senal.iloc[-1]
+        u = UMBRAL_SECTOR[sec_]
+        C = c.iloc[-1]
+        # cierre mínimo para que mañana la línea MACD quede sobre su señal (histograma >= 0)
+        p_cruce = (sg - ef * (1 - af) + es * (1 - as_)) / (af - as_)
+        # cierre máximo para que la línea MACD siga bajo cero
+        p_linea0 = (es * (1 - as_) - ef * (1 - af)) / (af - as_)
+        # cierre máximo para que el RSI de mañana siga bajo el umbral
+        g, p = backtest.rsi_estado(c.to_numpy(), RSI_PERIOD)
+        k = u / (100 - u); n1 = RSI_PERIOD - 1
+        if p == 0 or np.isnan(p):
+            continue
+        p_rsi = C + n1 * (p * k - g) if g / p < k else C - n1 * (g / k - p)
+        sma = c.rolling(SMA_LARGA).mean().iloc[-1]
+        bajo, alto = p_cruce, min(p_linea0, p_rsi)
+        if sec_ in CICLICOS:
+            alto = min(alto, sma)         # cíclicas: el cierre debe quedar bajo la SMA 200
+        else:
+            bajo = max(bajo, sma)         # defensivas y materias primas: sobre la SMA 200
+        if bajo >= alto or bajo <= 0:
+            continue
+        filas.append({"Ticker": t, "Sector": sec_, "Umbral": u,
+                      f"{COL_RSI} hoy": rsi(c).iloc[-1],
+                      "Último cierre": C, "Cierre mínimo": bajo, "Cierre máximo": alto,
+                      "Movimiento necesario %": (bajo / C - 1) * 100,
+                      "Rango %": (alto / bajo - 1) * 100,
+                      "vs SMA 200 %": (C / sma - 1) * 100})
+    return pd.DataFrame(filas)
 
 
 def estado_senal(fila, provisional):
@@ -938,14 +1007,15 @@ if vista == "General":
                f"MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL}: **Cruce alcista** = el MACD cruzó sobre su señal en la última sesión con ambas líneas bajo cero · **Pre-cruce** = histograma negativo pero subiendo, también con ambas bajo cero.")
 
     sobreventa = filtrado[filtrado[COL_RSI] < RSI_BAJO]
-    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento", "🛒 Hoy"]
+    etiquetas = ["Todas", f"{COL_RSI} < {RSI_BAJO} ({len(sobreventa)})", "⭐ Seguimiento", "🛒 Señal de hoy",
+                 "⏳ A punto de dar señal", "🧪 Forward test"]
     # al volver desde una empresa se abre la pestaña de donde se vino
     destino = st.session_state.pop("_ir_a_pestana", None)
     if destino is not None and destino < len(etiquetas):
         st.session_state["pestanas"] = etiquetas[destino]
     if st.session_state.get("pestanas") not in etiquetas:   # el conteo del título cambió
         st.session_state.pop("pestanas", None)
-    tab_todas, tab_rsi, tab_seg, tab_hoy = st.tabs(etiquetas, key="pestanas", on_change="rerun")
+    tab_todas, tab_rsi, tab_seg, tab_hoy, tab_cerca, tab_fwd = st.tabs(etiquetas, key="pestanas", on_change="rerun")
 
     with tab_todas:
         mostrar_tabla(con_estado_sector(filtrado, tuple(sorted(sel_uni))), "tabla_general", 0)
@@ -991,67 +1061,134 @@ if vista == "General":
                        "al redeployar: configura los secrets [seguimiento] gist_id y token.")
 
     with tab_hoy:
-        if st.session_state.get("pestanas") != "🛒 Hoy":
-            st.caption("Abre esta pestaña para calcular las órdenes del día.")
+        if st.session_state.get("pestanas") != "🛒 Señal de hoy":
+            st.caption("Abre esta pestaña para calcular la señal.")
         else:
             sen = senales_config(tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
             if sector != "Todos" and not sen.empty:
                 sen = sen[sen["Sector"] == sector]
+            ult = pd.Timestamp(sello.get("ultima_sesion") or cargar_precios(data["Ticker"].iloc[0])["Date"].iloc[-1])
+            provisional = periodo_en_curso(ult, "Diaria")
+            st.warning(
+                "Esta lista es el resultado **mecánico de tu configuración** (la que salió del backtest), no una "
+                "recomendación de inversión: no soy asesor financiero. Antes de operar revisa cada empresa, "
+                "confirma que esté disponible en Fintual y decide el monto según tu propio criterio.")
+            st.caption(
+                f"Regla: **MACD {MACD_FAST}/{MACD_SLOW}/{MACD_SIGNAL} cruza por abajo** (ambas líneas bajo cero) + **{COL_RSI} bajo "
+                "el umbral de su sector**, el mismo día: " +
+                " · ".join(f"**< {u}**: " + ", ".join(x for x, v in UMBRAL_SECTOR.items() if v == u)
+                           for u in sorted(set(UMBRAL_SECTOR.values()))) +
+                f". Además, el sector no puede estar **Debilitándose** y la **SMA {SMA_LARGA}**: las cíclicas "
+                f"({', '.join(sorted(CICLICOS))}) solo si el precio está **bajo** ella; las demás, solo si está **sobre** ella. "
+                f"Compra en la apertura siguiente; venta cuando el {COL_RSI} cierra sobre {RSI_ALTO}.")
+            compras = sen[sen["Pendiente"]].copy() if not sen.empty else pd.DataFrame()
+            k = st.columns(2)
+            k[0].metric("Señales de compra", f"{len(compras)}", f"sesión del {ult:%d-%b}", delta_color="off")
+            k[1].metric("Última señal registrada", f"{sen['Señal'].max():%d-%b}" if not sen.empty else "—")
+            if provisional:
+                st.info(f"La sesión del {ult:%d-%b} sigue abierta: las señales son **provisionales** y pueden "
+                        "desaparecer antes del cierre. Las definitivas quedan después de las 16:00 NY.")
+            if compras.empty:
+                st.caption(f"Ninguna empresa cumple la regla de compra en la sesión del {ult:%d-%b}. "
+                           "Mira la pestaña ⏳ para las que están cerca.")
+            else:
+                compras["_orden"] = (compras["Cuadrante sector"] != "Mejorando").astype(int)
+                compras = compras.sort_values(["_orden", "RSI señal"])
+                tc = tabla_senales(compras, data.set_index("Ticker")["Nombre"], provisional, ult)
+                tc = tc[["Ticker", "Nombre", "Sector", "Estado", "vs sector 5d", "RSI señal", "Umbral",
+                         "vs SMA 200 %", "Cuadrante sector", "Flujo sector", "Precio actual / venta"]].rename(
+                    columns={"Precio actual / venta": "Último cierre"})
+                mostrar_tabla(tc, "tabla_compras", 3, height=min(450, 38 + 35 * len(tc)))
+                fuertes = tc.loc[tc["vs sector 5d"] <= REZAGO_FUERTE, "Ticker"].tolist()
+                st.caption("Primero van las de sector ⭐ Mejorando y luego por RSI más bajo. **Último cierre** es "
+                           "referencial: el precio real será el de la apertura. **vs sector 5d** ≤ "
+                           f"{REZAGO_FUERTE} pp = cayó bastante más que su sector (en el backtest, el mejor rebote). "
+                           + (f"Hoy cumplen: **{', '.join(fuertes)}**." if fuertes else ""))
+
+    with tab_cerca:
+        if st.session_state.get("pestanas") != "⏳ A punto de dar señal":
+            st.caption("Abre esta pestaña para buscar las acciones cercanas a la señal.")
+        else:
+            cer = a_punto_senal(tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+            if sector != "Todos" and not cer.empty:
+                cer = cer[cer["Sector"] == sector]
+            st.caption(
+                "Acciones que **pueden dar la señal en la próxima rueda**: hay un rango de cierre que hace cruzar el "
+                f"MACD por abajo manteniendo el {COL_RSI} bajo el umbral de su sector y el filtro de SMA {SMA_LARGA} "
+                "(y su sector no está Debilitándose). Si mañana la acción cierra **entre el cierre mínimo y el "
+                "máximo**, aparece en 🛒 Señal de hoy. Bajo el mínimo el MACD no alcanza a cruzar; sobre el máximo "
+                f"el {COL_RSI} sube del umbral (o se rompe otra condición).")
+            if cer.empty:
+                st.info("Ninguna acción puede dar la señal en la próxima rueda.")
+            else:
+                cer = cer.assign(Nombre=cer["Ticker"].map(data.set_index("Ticker")["Nombre"]))
+                cer = con_estado_sector(cer, tuple(sorted(sel_uni)))
+                cer = cer[["Ticker", "Nombre", "Sector", "Cuadrante sector", "Flujo sector", "Umbral", f"{COL_RSI} hoy",
+                           "Último cierre", "Cierre mínimo", "Cierre máximo", "Movimiento necesario %", "Rango %",
+                           "vs SMA 200 %"]].sort_values("Movimiento necesario %", key=abs)
+                st.metric("Acciones a punto de dar señal", f"{len(cer)}")
+                mostrar_tabla(cer, "tabla_cerca", 4, height=min(650, 38 + 35 * len(cer)))
+                st.caption("**Movimiento necesario** = cuánto tiene que subir (o puede bajar, si es negativo) el cierre "
+                           "de mañana respecto del último para llegar al cierre mínimo. **Rango** = qué tan ancha es la "
+                           "ventana entre el mínimo y el máximo: más ancha, más fácil que se cumpla. Ordenadas por el "
+                           "movimiento necesario más chico.")
+
+    with tab_fwd:
+        if st.session_state.get("pestanas") != "🧪 Forward test":
+            st.caption("Abre esta pestaña para ver el seguimiento de la regla.")
+        else:
+            sen = senales_config(tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+            if sector != "Todos" and not sen.empty:
+                sen = sen[sen["Sector"] == sector]
+            st.caption("**Forward test**: qué habría pasado siguiendo la regla al pie de la letra, sin límite de cupos "
+                       "(cada señal válida compra en la apertura siguiente y vende cuando el "
+                       f"{COL_RSI} cierra sobre {RSI_ALTO}). No es tu cartera: tus compras reales están en **Mi cartera**.")
             if sen.empty:
                 st.info("No hay señales con la configuración y los filtros actuales.")
             else:
                 ult = sen["Señal"].max()
                 provisional = periodo_en_curso(ult, "Diaria")
                 nombres = data.set_index("Ticker")["Nombre"]
-                st.warning(
-                    "Esta lista es el resultado **mecánico de tu configuración** (la que salió del backtest), no una "
-                    "recomendación de inversión: no soy asesor financiero. Antes de operar revisa cada empresa, "
-                    "confirma que esté disponible en Fintual y decide el monto según tu propio criterio.")
-                if provisional:
-                    st.info(f"La sesión del {ult:%d-%b} sigue abierta: las señales de hoy son **provisionales** y "
-                            "pueden desaparecer antes del cierre. Las definitivas quedan después de las 16:00 NY.")
+                desde = st.select_slider("Desde", ["1 mes", "3 meses", "6 meses", "1 año", "Todo"], value="3 meses",
+                                         key="fwd_desde")
+                lim = {"1 mes": 1, "3 meses": 3, "6 meses": 6, "1 año": 12, "Todo": 1000}[desde]
+                v = sen[sen["Señal"] >= pd.Timestamp.now().normalize() - pd.DateOffset(months=lim)]
+                abiertas = v[v["Abierta"] & ~v["Pendiente"]]
+                vend = v[~v["Abierta"]]
+                ventas = v[v["Venta pendiente"]]
+                k = st.columns(4)
+                k[0].metric("Posiciones abiertas", f"{len(abiertas)}")
+                k[1].metric("Retorno prom. abiertas", f"{abiertas['Retorno %'].mean():+.2f}%" if len(abiertas) else "—",
+                            "aún sin vender", delta_color="off")
+                k[2].metric("Retorno prom. vendidas", f"{vend['Retorno %'].mean():+.2f}%" if len(vend) else "—",
+                            f"{len(vend)} vendidas · mediana {vend['Retorno %'].median():+.2f}%" if len(vend) else None,
+                            delta_color="off")
+                k[3].metric("Vendidas ganadoras", f"{(vend['Retorno %'] > 0).mean() * 100:.0f}%" if len(vend) else "—")
 
-                compras = sen[sen["Pendiente"]].copy()
-                compras["_orden"] = (compras["Cuadrante sector"] != "Mejorando").astype(int)
-                compras = compras.sort_values(["_orden", "RSI señal"])
-                ventas = sen[sen["Venta pendiente"]]
-                k = st.columns(3)
-                k[0].metric("Para comprar", f"{len(compras)}", f"señales del {ult:%d-%b}", delta_color="off")
-                k[1].metric("Para vender", f"{len(ventas)}", f"{COL_RSI} sobre {RSI_ALTO}", delta_color="off")
-                k[2].metric("Posiciones que siguen abiertas",
-                            f"{(sen['Abierta'] & ~sen['Pendiente'] & ~sen['Venta pendiente']).sum()}")
-
-                st.subheader("🟢 Comprar")
-                if compras.empty:
-                    st.caption("Ninguna empresa cumple la regla de compra en la última sesión.")
-                else:
-                    tc = tabla_senales(compras, nombres, provisional, ult)
-                    tc = tc[["Ticker", "Nombre", "Sector", "Estado", "vs sector 5d", "RSI señal", "Umbral",
-                             "vs SMA 200 %", "Cuadrante sector", "Flujo sector", "Precio actual / venta"]].rename(
-                        columns={"Precio actual / venta": "Último cierre"})
-                    mostrar_tabla(tc, "tabla_compras", 3, height=min(450, 38 + 35 * len(tc)))
-                    st.caption(f"Regla: la compra se hace en la **apertura siguiente** a la señal del {ult:%d-%b}. "
-                               "Primero van las de sector ⭐ Mejorando (el contexto que mejor rindió) y luego por "
-                               f"{COL_RSI} más bajo. **Último cierre** es referencial: el precio real será el de la "
-                               "apertura.")
-                    fuertes = tc.loc[tc["vs sector 5d"] <= REZAGO_FUERTE, "Ticker"].tolist()
-                    st.caption(f"**vs sector 5d** = cuánto más (o menos) cayó la acción que sus pares del sector en la "
-                               f"última semana. En el backtest, las señales con {REZAGO_FUERTE} pp o menos rindieron 2-3 "
-                               "veces más que el resto (+7,7% de exceso por operación contra ~2-3%), así que sirve "
-                               "para elegir si no puedes tomar todas. "
-                               + (f"Hoy cumplen: **{', '.join(fuertes)}**." if fuertes else "Hoy ninguna cumple."))
-
-                st.subheader("🔴 Vender")
+                st.subheader("🔴 Vender en la próxima apertura")
                 if ventas.empty:
                     st.caption(f"Ninguna posición abierta tiene el {COL_RSI} sobre {RSI_ALTO}.")
                 else:
                     tv = tabla_senales(ventas, nombres, provisional, ult)
                     tv = tv[["Ticker", "Nombre", "Sector", "Fecha señal", "Compra", "Precio compra",
-                             "Precio actual / venta", "Retorno %", "Días"]].rename(
-                        columns={"Precio actual / venta": "Último cierre"})
-                    mostrar_tabla(tv, "tabla_ventas", 3, height=min(450, 38 + 35 * len(tv)))
-                    st.caption(f"Posiciones de la regla cuyo {COL_RSI} cerró sobre {RSI_ALTO}: la venta se hace en "
-                               "la apertura siguiente. Solo aplica si compraste esa posición siguiendo la regla.")
+                             "Precio actual / venta", "Retorno %", "Días"]].rename(columns={"Precio actual / venta": "Último cierre"})
+                    mostrar_tabla(tv, "tabla_ventas", 5, height=min(450, 38 + 35 * len(tv)))
+
+                st.subheader("🔵 Posiciones abiertas")
+                if abiertas.empty:
+                    st.caption("No hay posiciones abiertas en el período elegido.")
+                else:
+                    ta = tabla_senales(abiertas, nombres, provisional, ult)
+                    mostrar_tabla(ta, "tabla_abiertas", 5, height=min(500, 38 + 35 * len(ta)))
+
+                st.subheader("⚪ Vendidas")
+                if vend.empty:
+                    st.caption("No hay posiciones vendidas en el período elegido.")
+                else:
+                    tvv = tabla_senales(vend, nombres, provisional, ult)
+                    mostrar_tabla(tvv, "tabla_vendidas", 5, height=min(500, 38 + 35 * len(tvv)))
+                st.caption("**Retorno %** = desde la compra hasta el precio actual (o la venta), descontando 0,1% de "
+                           "costo. Es la aplicación de un backtest, no una recomendación de inversión.")
 
 
 # ---------------------------------------------------------------------------
