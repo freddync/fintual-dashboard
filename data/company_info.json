@@ -631,10 +631,11 @@
  },
  "DIS": {
   "name": "Walt Disney Company (The)",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Services-Misc. Amusement & Recreation",
   "desc": "Walt Disney Company (The) cotiza en NYSE, sector consumo discrecional, industria services-misc. amusement & recreation. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "BA": {
   "name": "Boeing Company (The)",
@@ -666,10 +667,11 @@
  },
  "ETN": {
   "name": "Eaton Corporation PLC Ordinary Shares",
-  "sector": "Tecnología",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Eaton Corporation PLC Ordinary Shares cotiza en NYSE, sector tecnología, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "UNP": {
   "name": "Union Pacific Corporation",
@@ -757,10 +759,11 @@
  },
  "UBER": {
   "name": "Uber Technologies Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Business Services",
   "desc": "Uber Technologies Inc. cotiza en NYSE, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "SCCO": {
   "name": "Southern Copper Corporation",
@@ -785,17 +788,19 @@
  },
  "GLW": {
   "name": "Corning Incorporated",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Telecommunications Equipment",
   "desc": "Corning Incorporated cotiza en NYSE, sector industrial, industria telecommunications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "DHR": {
   "name": "Danaher Corporation",
-  "sector": "Industrial",
+  "sector": "Salud",
   "industry": "Industrial Machinery/Components",
   "desc": "Danaher Corporation cotiza en NYSE, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "LMT": {
   "name": "Lockheed Martin Corporation",
@@ -890,24 +895,27 @@
  },
  "CVS": {
   "name": "CVS Health Corporation",
-  "sector": "Consumo básico",
+  "sector": "Salud",
   "industry": "Retail-Drug Stores and Proprietary Stores",
   "desc": "CVS Health Corporation cotiza en NYSE, sector consumo básico, industria retail-drug stores and proprietary stores. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo básico"
  },
  "NEM": {
   "name": "Newmont Corporation",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Newmont Corporation cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "BTI": {
   "name": "British American Tobacco  Industries p.l.c.",
-  "sector": "Salud",
+  "sector": "Consumo básico",
   "industry": " Medicinal Chemicals and Botanical Products ",
   "desc": "British American Tobacco  Industries p.l.c. cotiza en NYSE, sector salud, industria  medicinal chemicals and botanical products . Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Salud"
  },
  "SPGI": {
   "name": "S&P Global Inc.",
@@ -953,10 +961,11 @@
  },
  "ACN": {
   "name": "Accenture plc Class A Ordinary Shares (Ireland)",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Business Services",
   "desc": "Accenture plc Class A Ordinary Shares (Ireland) cotiza en NYSE, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "FTNT": {
   "name": "Fortinet Inc.",
@@ -1002,10 +1011,11 @@
  },
  "VRT": {
   "name": "Vertiv Holdings LLC",
-  "sector": "Tecnología",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Vertiv Holdings LLC cotiza en NYSE, sector tecnología, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "NET": {
   "name": "Cloudflare Inc.",
@@ -1044,10 +1054,11 @@
  },
  "MO": {
   "name": "Altria Group Inc.",
-  "sector": "Salud",
+  "sector": "Consumo básico",
   "industry": " Medicinal Chemicals and Botanical Products ",
   "desc": "Altria Group Inc. cotiza en NYSE, sector salud, industria  medicinal chemicals and botanical products . Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Salud"
  },
  "EQIX": {
   "name": "Equinix Inc.",
@@ -1072,10 +1083,11 @@
  },
  "BN": {
   "name": "Brookfield Corporation Class A Limited Voting Shares",
-  "sector": "Bienes raíces",
+  "sector": "Financiero",
   "industry": "Building operators",
   "desc": "Brookfield Corporation Class A Limited Voting Shares cotiza en NYSE, sector bienes raíces, industria building operators. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Bienes raíces"
  },
  "GD": {
   "name": "General Dynamics Corporation",
@@ -1114,17 +1126,19 @@
  },
  "APP": {
   "name": "Applovin Corporation",
-  "sector": "Tecnología",
+  "sector": "Servicios de comunicación",
   "industry": "Computer Software: Programming Data Processing",
   "desc": "Applovin Corporation cotiza en NASDAQ, sector tecnología, industria computer software: programming data processing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "SPOT": {
   "name": "Spotify Technology S.A. Ordinary Shares",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Broadcasting",
   "desc": "Spotify Technology S.A. Ordinary Shares cotiza en NYSE, sector consumo discrecional, industria broadcasting. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ADBE": {
   "name": "Adobe Inc.",
@@ -1219,10 +1233,11 @@
  },
  "RACE": {
   "name": "Ferrari N.V. Common Shares",
-  "sector": "Industrial",
+  "sector": "Consumo discrecional",
   "industry": "Auto Manufacturing",
   "desc": "Ferrari N.V. Common Shares cotiza en NYSE, sector industrial, industria auto manufacturing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "CME": {
   "name": "CME Group Inc.",
@@ -1247,10 +1262,11 @@
  },
  "AEM": {
   "name": "Agnico Eagle Mines Limited",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Agnico Eagle Mines Limited cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "INTU": {
   "name": "Intuit Inc.",
@@ -1261,10 +1277,11 @@
  },
  "MMM": {
   "name": "3M Company",
-  "sector": "Salud",
+  "sector": "Industrial",
   "industry": "Medical/Dental Instruments",
   "desc": "3M Company cotiza en NYSE, sector salud, industria medical/dental instruments. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Salud"
  },
  "DASH": {
   "name": "DoorDash Inc.",
@@ -1317,10 +1334,11 @@
  },
  "WMB": {
   "name": "Williams Companies Inc. (The)",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Natural Gas Distribution",
   "desc": "Williams Companies Inc. (The) cotiza en NYSE, sector servicios públicos, industria natural gas distribution. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "DDOG": {
   "name": "Datadog Inc.",
@@ -1331,17 +1349,19 @@
  },
  "EMR": {
   "name": "Emerson Electric Company",
-  "sector": "Tecnología",
+  "sector": "Industrial",
   "industry": "Consumer Electronics/Appliances",
   "desc": "Emerson Electric Company cotiza en NYSE, sector tecnología, industria consumer electronics/appliances. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "WM": {
   "name": "Waste Management Inc.",
-  "sector": "Servicios públicos",
+  "sector": "Industrial",
   "industry": "Environmental Services",
   "desc": "Waste Management Inc. cotiza en NYSE, sector servicios públicos, industria environmental services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "MRSH": {
   "name": "Marsh",
@@ -1366,10 +1386,11 @@
  },
  "SHW": {
   "name": "Sherwin-Williams Company (The)",
-  "sector": "Consumo discrecional",
+  "sector": "Materiales",
   "industry": "RETAIL: Building Materials",
   "desc": "Sherwin-Williams Company (The) cotiza en NYSE, sector consumo discrecional, industria retail: building materials. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "E": {
   "name": "ENI S.p.A.",
@@ -1401,10 +1422,11 @@
  },
  "BAM": {
   "name": "Brookfield Asset Management Inc Class A Limited Voting Shares",
-  "sector": "Bienes raíces",
+  "sector": "Financiero",
   "industry": "Building operators",
   "desc": "Brookfield Asset Management Inc Class A Limited Voting Shares cotiza en NYSE, sector bienes raíces, industria building operators. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Bienes raíces"
  },
  "HOOD": {
   "name": "Robinhood Markets Inc.",
@@ -1415,10 +1437,11 @@
  },
  "EPD": {
   "name": "Enterprise Products Partners L.P.",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Natural Gas Distribution",
   "desc": "Enterprise Products Partners L.P. cotiza en NYSE, sector servicios públicos, industria natural gas distribution. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "MCO": {
   "name": "Moody's Corporation",
@@ -1513,10 +1536,11 @@
  },
  "FDX": {
   "name": "FedEx Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Air Freight/Delivery Services",
   "desc": "FedEx Corporation cotiza en NYSE, sector consumo discrecional, industria air freight/delivery services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ROST": {
   "name": "Ross Stores Inc.",
@@ -1534,10 +1558,11 @@
  },
  "ECL": {
   "name": "Ecolab Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Materiales",
   "industry": "Package Goods/Cosmetics",
   "desc": "Ecolab Inc. cotiza en NYSE, sector consumo discrecional, industria package goods/cosmetics. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "TRV": {
   "name": "The Travelers Companies Inc.",
@@ -1569,17 +1594,19 @@
  },
  "GM": {
   "name": "General Motors Company",
-  "sector": "Industrial",
+  "sector": "Consumo discrecional",
   "industry": "Auto Manufacturing",
   "desc": "General Motors Company cotiza en NYSE, sector industrial, industria auto manufacturing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "NBIS": {
   "name": "Nebius Group N.V. Class A Ordinary Shares",
-  "sector": "Tecnología",
+  "sector": "Servicios de comunicación",
   "industry": "Computer Software: Programming Data Processing",
   "desc": "Nebius Group N.V. Class A Ordinary Shares cotiza en NASDAQ, sector tecnología, industria computer software: programming data processing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "AON": {
   "name": "Aon plc Class A Ordinary Shares (Ireland)",
@@ -1660,17 +1687,19 @@
  },
  "CL": {
   "name": "Colgate-Palmolive Company",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Package Goods/Cosmetics",
   "desc": "Colgate-Palmolive Company cotiza en NYSE, sector consumo discrecional, industria package goods/cosmetics. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "KMI": {
   "name": "Kinder Morgan Inc.",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Natural Gas Distribution",
   "desc": "Kinder Morgan Inc. cotiza en NYSE, sector servicios públicos, industria natural gas distribution. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "DB": {
   "name": "Deutsche Bank AG",
@@ -1681,10 +1710,11 @@
  },
  "LITE": {
   "name": "Lumentum Holdings Inc.",
-  "sector": "Servicios de comunicación",
+  "sector": "Tecnología",
   "industry": "Telecommunications Equipment",
   "desc": "Lumentum Holdings Inc. cotiza en NASDAQ, sector servicios de comunicación, industria telecommunications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios de comunicación"
  },
  "SPG": {
   "name": "Simon Property Group Inc.",
@@ -1702,10 +1732,11 @@
  },
  "TGT": {
   "name": "Target Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Department/Specialty Retail Stores",
   "desc": "Target Corporation cotiza en NYSE, sector consumo discrecional, industria department/specialty retail stores. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "TDG": {
   "name": "Transdigm Group Incorporated",
@@ -1737,10 +1768,11 @@
  },
  "B": {
   "name": "Barrick Mining Corporation Common Shares",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Barrick Mining Corporation Common Shares cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "AEP": {
   "name": "American Electric Power Company Inc.",
@@ -1751,10 +1783,11 @@
  },
  "BE": {
   "name": "Bloom Energy Corporation",
-  "sector": "Energía",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Bloom Energy Corporation cotiza en NYSE, sector energía, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Energía"
  },
  "ALL": {
   "name": "Allstate Corporation (The)",
@@ -1765,24 +1798,27 @@
  },
  "RSG": {
   "name": "Republic Services Inc.",
-  "sector": "Servicios públicos",
+  "sector": "Industrial",
   "industry": "Environmental Services",
   "desc": "Republic Services Inc. cotiza en NYSE, sector servicios públicos, industria environmental services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "TER": {
   "name": "Teradyne Inc.",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Electrical Products",
   "desc": "Teradyne Inc. cotiza en NASDAQ, sector industrial, industria electrical products. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "CRH": {
   "name": "CRH PLC Ordinary Shares",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Building Materials",
   "desc": "CRH PLC Ordinary Shares cotiza en NYSE, sector industrial, industria building materials. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "TFC": {
   "name": "Truist Financial Corporation",
@@ -1807,17 +1843,19 @@
  },
  "BKR": {
   "name": "Baker Hughes Company",
-  "sector": "Consumo discrecional",
+  "sector": "Energía",
   "industry": "Oil and Gas Field Machinery",
   "desc": "Baker Hughes Company cotiza en NASDAQ, sector consumo discrecional, industria oil and gas field machinery. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "TRP": {
   "name": "TC Energy Corporation",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Natural Gas Distribution",
   "desc": "TC Energy Corporation cotiza en NYSE, sector servicios públicos, industria natural gas distribution. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "COHR": {
   "name": "Coherent Corp.",
@@ -1856,24 +1894,27 @@
  },
  "KEYS": {
   "name": "Keysight Technologies Inc.",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "Keysight Technologies Inc. cotiza en NYSE, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "NUE": {
   "name": "Nucor Corporation",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Steel/Iron Ore",
   "desc": "Nucor Corporation cotiza en NYSE, sector industrial, industria steel/iron ore. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "WPM": {
   "name": "Wheaton Precious Metals Corp Common Shares (Canada)",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Wheaton Precious Metals Corp Common Shares (Canada) cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "AFL": {
   "name": "AFLAC Incorporated",
@@ -1884,10 +1925,11 @@
  },
  "CIEN": {
   "name": "Ciena Corporation",
-  "sector": "Servicios públicos",
+  "sector": "Tecnología",
   "industry": "Telecommunications Equipment",
   "desc": "Ciena Corporation cotiza en NYSE, sector servicios públicos, industria telecommunications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "D": {
   "name": "Dominion Energy Inc.",
@@ -1912,17 +1954,19 @@
  },
  "OKE": {
   "name": "ONEOK Inc.",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Oil & Gas Production",
   "desc": "ONEOK Inc. cotiza en NYSE, sector servicios públicos, industria oil & gas production. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "GRMN": {
   "name": "Garmin Ltd.",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "Garmin Ltd. cotiza en NYSE, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "O": {
   "name": "Realty Income Corporation",
@@ -1940,24 +1984,27 @@
  },
  "TRGP": {
   "name": "Targa Resources Inc.",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Natural Gas Distribution",
   "desc": "Targa Resources Inc. cotiza en NYSE, sector servicios públicos, industria natural gas distribution. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "DAL": {
   "name": "Delta Air Lines Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Air Freight/Delivery Services",
   "desc": "Delta Air Lines Inc. cotiza en NYSE, sector consumo discrecional, industria air freight/delivery services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "FAST": {
   "name": "Fastenal Company",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "RETAIL: Building Materials",
   "desc": "Fastenal Company cotiza en NASDAQ, sector consumo discrecional, industria retail: building materials. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "AME": {
   "name": "AMETEK Inc.",
@@ -2010,24 +2057,27 @@
  },
  "F": {
   "name": "Ford Motor Company",
-  "sector": "Industrial",
+  "sector": "Consumo discrecional",
   "industry": "Auto Manufacturing",
   "desc": "Ford Motor Company cotiza en NYSE, sector industrial, industria auto manufacturing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "MT": {
   "name": "Arcelor Mittal NY Registry Shares NEW",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Steel/Iron Ore",
   "desc": "Arcelor Mittal NY Registry Shares NEW cotiza en NYSE, sector industrial, industria steel/iron ore. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "LNG": {
   "name": "Cheniere Energy Inc.",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Oil/Gas Transmission",
   "desc": "Cheniere Energy Inc. cotiza en NYSE, sector servicios públicos, industria oil/gas transmission. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "ALAB": {
   "name": "Astera Labs Inc.",
@@ -2080,10 +2130,11 @@
  },
  "PYPL": {
   "name": "PayPal Holdings Inc.",
-  "sector": "Industrial",
+  "sector": "Financiero",
   "industry": "Diversified Commercial Services",
   "desc": "PayPal Holdings Inc. cotiza en NASDAQ, sector industrial, industria diversified commercial services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "HONA": {
   "name": "Honeywell Aerospace Inc.",
@@ -2136,10 +2187,11 @@
  },
  "CTVA": {
   "name": "Corteva Inc.",
-  "sector": "Consumo básico",
+  "sector": "Materiales",
   "industry": "Farming/Seeds/Milling",
   "desc": "Corteva Inc. cotiza en NYSE, sector consumo básico, industria farming/seeds/milling. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo básico"
  },
  "WAB": {
   "name": "Westinghouse Air Brake Technologies Corporation",
@@ -2227,10 +2279,11 @@
  },
  "AU": {
   "name": "AngloGold Ashanti PLC Ordinary Shares",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "AngloGold Ashanti PLC Ordinary Shares cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "CRDO": {
   "name": "Credo Technology Group Holding Ltd Ordinary Shares",
@@ -2269,10 +2322,11 @@
  },
  "FERG": {
   "name": "Ferguson Enterprises Inc.",
-  "sector": "Diversos",
+  "sector": "Industrial",
   "industry": "Miscellaneous",
   "desc": "Ferguson Enterprises Inc. cotiza en NYSE, sector diversos, industria miscellaneous. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Diversos"
  },
  "EXC": {
   "name": "Exelon Corporation",
@@ -2311,10 +2365,11 @@
  },
  "TTWO": {
   "name": "Take-Two Interactive Software Inc.",
-  "sector": "Tecnología",
+  "sector": "Servicios de comunicación",
   "industry": "Computer Software: Prepackaged Software",
   "desc": "Take-Two Interactive Software Inc. cotiza en NASDAQ, sector tecnología, industria computer software: prepackaged software. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "FER": {
   "name": "Ferrovial N.V. Ordinary Shares",
@@ -2339,17 +2394,19 @@
  },
  "FNV": {
   "name": "Franco-Nevada Corporation",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Franco-Nevada Corporation cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "TRI": {
   "name": "Thomson Reuters Corporation Common Shares",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Publishing",
   "desc": "Thomson Reuters Corporation Common Shares cotiza en NASDAQ, sector consumo discrecional, industria publishing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "NTRA": {
   "name": "Natera Inc.",
@@ -2360,17 +2417,19 @@
  },
  "LYV": {
   "name": "Live Nation Entertainment Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Services-Misc. Amusement & Recreation",
   "desc": "Live Nation Entertainment Inc. cotiza en NYSE, sector consumo discrecional, industria services-misc. amusement & recreation. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "CBRE": {
   "name": "CBRE Group Inc",
-  "sector": "Financiero",
+  "sector": "Bienes raíces",
   "industry": "Real Estate",
   "desc": "CBRE Group Inc cotiza en NYSE, sector financiero, industria real estate. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Financiero"
  },
  "ODFL": {
   "name": "Old Dominion Freight Line Inc.",
@@ -2402,10 +2461,11 @@
  },
  "PAYX": {
   "name": "Paychex Inc.",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Diversified Commercial Services",
   "desc": "Paychex Inc. cotiza en NASDAQ, sector industrial, industria diversified commercial services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "PRU": {
   "name": "Prudential Financial Inc.",
@@ -2437,17 +2497,19 @@
  },
  "CCJ": {
   "name": "Cameco Corporation",
-  "sector": "Materiales",
+  "sector": "Energía",
   "industry": "Other Metals and Minerals",
   "desc": "Cameco Corporation cotiza en NYSE, sector materiales, industria other metals and minerals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "WCN": {
   "name": "Waste Connections Inc. Common Shares",
-  "sector": "Servicios públicos",
+  "sector": "Industrial",
   "industry": "Environmental Services",
   "desc": "Waste Connections Inc. Common Shares cotiza en NYSE, sector servicios públicos, industria environmental services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "CMG": {
   "name": "Chipotle Mexican Grill Inc.",
@@ -2458,10 +2520,11 @@
  },
  "A": {
   "name": "Agilent Technologies Inc.",
-  "sector": "Industrial",
+  "sector": "Salud",
   "industry": "Biotechnology: Laboratory Analytical Instruments",
   "desc": "Agilent Technologies Inc. cotiza en NYSE, sector industrial, industria biotechnology: laboratory analytical instruments. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "RKT": {
   "name": "Rocket Companies Inc.",
@@ -2486,10 +2549,11 @@
  },
  "MSCI": {
   "name": "MSCI Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Financiero",
   "industry": "Business Services",
   "desc": "MSCI Inc. cotiza en NYSE, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "TEAM": {
   "name": "Atlassian Corporation",
@@ -2500,10 +2564,11 @@
  },
  "HMC": {
   "name": "Honda Motor Company Ltd.",
-  "sector": "Industrial",
+  "sector": "Consumo discrecional",
   "industry": "Auto Manufacturing",
   "desc": "Honda Motor Company Ltd. cotiza en NYSE, sector industrial, industria auto manufacturing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "NTAP": {
   "name": "NetApp Inc.",
@@ -2514,10 +2579,11 @@
  },
  "WAT": {
   "name": "Waters Corporation",
-  "sector": "Industrial",
+  "sector": "Salud",
   "industry": "Biotechnology: Laboratory Analytical Instruments",
   "desc": "Waters Corporation cotiza en NYSE, sector industrial, industria biotechnology: laboratory analytical instruments. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "YUM": {
   "name": "Yum! Brands Inc.",
@@ -2549,24 +2615,27 @@
  },
  "VEEV": {
   "name": "Veeva Systems Inc.",
-  "sector": "Tecnología",
+  "sector": "Salud",
   "industry": "Computer Software: Prepackaged Software",
   "desc": "Veeva Systems Inc. cotiza en NYSE, sector tecnología, industria computer software: prepackaged software. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "SYY": {
   "name": "Sysco Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Food Distributors",
   "desc": "Sysco Corporation cotiza en NYSE, sector consumo discrecional, industria food distributors. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ROP": {
   "name": "Roper Technologies Inc.",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "Roper Technologies Inc. cotiza en NASDAQ, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "P": {
   "name": "Everpure Inc. Class A common stock",
@@ -2619,10 +2688,11 @@
  },
  "TKO": {
   "name": "TKO Group Holdings Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Services-Misc. Amusement & Recreation",
   "desc": "TKO Group Holdings Inc. cotiza en NYSE, sector consumo discrecional, industria services-misc. amusement & recreation. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "EXPE": {
   "name": "Expedia Group Inc.",
@@ -2682,17 +2752,19 @@
  },
  "KVUE": {
   "name": "Kenvue Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Package Goods/Cosmetics",
   "desc": "Kenvue Inc. cotiza en NYSE, sector consumo discrecional, industria package goods/cosmetics. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "KMB": {
   "name": "Kimberly-Clark Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Containers/Packaging",
   "desc": "Kimberly-Clark Corporation cotiza en NASDAQ, sector consumo discrecional, industria containers/packaging. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "MTB": {
   "name": "M&T Bank Corporation",
@@ -2703,10 +2775,11 @@
  },
  "STLD": {
   "name": "Steel Dynamics Inc.",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Steel/Iron Ore",
   "desc": "Steel Dynamics Inc. cotiza en NASDAQ, sector industrial, industria steel/iron ore. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "TWLO": {
   "name": "Twilio Inc.",
@@ -2717,10 +2790,11 @@
  },
  "VMC": {
   "name": "Vulcan Materials Company (Holding Company)",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Mining & Quarrying of Nonmetallic Minerals (No Fuels)",
   "desc": "Vulcan Materials Company (Holding Company) cotiza en NYSE, sector industrial, industria mining & quarrying of nonmetallic minerals (no fuels). Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "BAP": {
   "name": "Credicorp Ltd.",
@@ -2773,10 +2847,11 @@
  },
  "BIDU": {
   "name": "Baidu Inc. ADS",
-  "sector": "Tecnología",
+  "sector": "Servicios de comunicación",
   "industry": "Computer Software: Programming Data Processing",
   "desc": "Baidu Inc. ADS cotiza en NASDAQ, sector tecnología, industria computer software: programming data processing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "NTRS": {
   "name": "Northern Trust Corporation",
@@ -2787,10 +2862,11 @@
  },
  "VG": {
   "name": "Venture Global Inc. Class A common stock",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Oil/Gas Transmission",
   "desc": "Venture Global Inc. Class A common stock cotiza en NYSE, sector servicios públicos, industria oil/gas transmission. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "RJF": {
   "name": "Raymond James Financial Inc.",
@@ -2801,10 +2877,11 @@
  },
  "SUNB": {
   "name": "Sunbelt Rentals Holdings Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Diversified Commercial Services",
   "desc": "Sunbelt Rentals Holdings Inc. cotiza en NYSE, sector consumo discrecional, industria diversified commercial services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "KR": {
   "name": "Kroger Company (The)",
@@ -2822,10 +2899,11 @@
  },
  "RDDT": {
   "name": "Reddit Inc.",
-  "sector": "Tecnología",
+  "sector": "Servicios de comunicación",
   "industry": "EDP Services",
   "desc": "Reddit Inc. cotiza en NYSE, sector tecnología, industria edp services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "EQT": {
   "name": "EQT Corporation",
@@ -2878,24 +2956,27 @@
  },
  "MLM": {
   "name": "Martin Marietta Materials Inc.",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Mining & Quarrying of Nonmetallic Minerals (No Fuels)",
   "desc": "Martin Marietta Materials Inc. cotiza en NYSE, sector industrial, industria mining & quarrying of nonmetallic minerals (no fuels). Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "NTR": {
   "name": "Nutrien Ltd. Common Shares",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Agricultural Chemicals",
   "desc": "Nutrien Ltd. Common Shares cotiza en NYSE, sector industrial, industria agricultural chemicals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "KGC": {
   "name": "Kinross Gold Corporation",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Kinross Gold Corporation cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "RMD": {
   "name": "ResMed Inc.",
@@ -2927,10 +3008,11 @@
  },
  "TDY": {
   "name": "Teledyne Technologies Incorporated",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "Teledyne Technologies Incorporated cotiza en NYSE, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "CFG": {
   "name": "Citizens Financial Group Inc.",
@@ -2955,10 +3037,11 @@
  },
  "EL": {
   "name": "Estee Lauder Companies Inc. (The)",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Package Goods/Cosmetics",
   "desc": "Estee Lauder Companies Inc. (The) cotiza en NYSE, sector consumo discrecional, industria package goods/cosmetics. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ATI": {
   "name": "ATI Inc.",
@@ -2969,10 +3052,11 @@
  },
  "TECK": {
   "name": "Teck Resources Ltd Ordinary Shares",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Mining & Quarrying of Nonmetallic Minerals (No Fuels)",
   "desc": "Teck Resources Ltd Ordinary Shares cotiza en NYSE, sector industrial, industria mining & quarrying of nonmetallic minerals (no fuels). Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "ZM": {
   "name": "Zoom Communications Inc.",
@@ -2990,10 +3074,11 @@
  },
  "FTI": {
   "name": "TechnipFMC plc Ordinary Share",
-  "sector": "Consumo discrecional",
+  "sector": "Energía",
   "industry": "Oil and Gas Field Machinery",
   "desc": "TechnipFMC plc Ordinary Share cotiza en NYSE, sector consumo discrecional, industria oil and gas field machinery. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "WTW": {
   "name": "Willis Towers Watson Public Limited Company Ordinary Shares",
@@ -3081,10 +3166,11 @@
  },
  "CPRT": {
   "name": "Copart Inc. (DE)",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Retail-Auto Dealers and Gas Stations",
   "desc": "Copart Inc. (DE) cotiza en NASDAQ, sector consumo discrecional, industria retail-auto dealers and gas stations. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "LPLA": {
   "name": "LPL Financial Holdings Inc.",
@@ -3109,10 +3195,11 @@
  },
  "FOXA": {
   "name": "Fox Corporation",
-  "sector": "Industrial",
+  "sector": "Servicios de comunicación",
   "industry": "Broadcasting",
   "desc": "Fox Corporation cotiza en NASDAQ, sector industrial, industria broadcasting. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "FTS": {
   "name": "Fortis Inc. Common Shares",
@@ -3165,10 +3252,11 @@
  },
  "MTD": {
   "name": "Mettler-Toledo International Inc.",
-  "sector": "Industrial",
+  "sector": "Salud",
   "industry": "Biotechnology: Laboratory Analytical Instruments",
   "desc": "Mettler-Toledo International Inc. cotiza en NYSE, sector industrial, industria biotechnology: laboratory analytical instruments. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "XYL": {
   "name": "Xylem Inc.",
@@ -3193,17 +3281,19 @@
  },
  "OTIS": {
   "name": "Otis Worldwide Corporation",
-  "sector": "Tecnología",
+  "sector": "Industrial",
   "industry": "Consumer Electronics/Appliances",
   "desc": "Otis Worldwide Corporation cotiza en NYSE, sector tecnología, industria consumer electronics/appliances. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "ASTS": {
   "name": "AST SpaceMobile Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Telecommunications Equipment",
   "desc": "AST SpaceMobile Inc. cotiza en NASDAQ, sector consumo discrecional, industria telecommunications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "HPQ": {
   "name": "HP Inc.",
@@ -3228,24 +3318,27 @@
  },
  "CPAY": {
   "name": "Corpay Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Business Services",
   "desc": "Corpay Inc. cotiza en NYSE, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "RBLX": {
   "name": "Roblox Corporation",
-  "sector": "Tecnología",
+  "sector": "Servicios de comunicación",
   "industry": "Computer Software: Prepackaged Software",
   "desc": "Roblox Corporation cotiza en NYSE, sector tecnología, industria computer software: prepackaged software. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "AER": {
   "name": "AerCap Holdings N.V. Ordinary Shares",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Diversified Commercial Services",
   "desc": "AerCap Holdings N.V. Ordinary Shares cotiza en NYSE, sector consumo discrecional, industria diversified commercial services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ES": {
   "name": "Eversource Energy (D/B/A)",
@@ -3256,10 +3349,11 @@
  },
  "DG": {
   "name": "Dollar General Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Department/Specialty Retail Stores",
   "desc": "Dollar General Corporation cotiza en NYSE, sector consumo discrecional, industria department/specialty retail stores. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "RF": {
   "name": "Regions Financial Corporation",
@@ -3291,10 +3385,11 @@
  },
  "HUBB": {
   "name": "Hubbell Inc",
-  "sector": "Tecnología",
+  "sector": "Industrial",
   "industry": "Electrical Products",
   "desc": "Hubbell Inc cotiza en NYSE, sector tecnología, industria electrical products. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "CRS": {
   "name": "Carpenter Technology Corporation",
@@ -3319,10 +3414,11 @@
  },
  "ECHO": {
   "name": "EchoStar  Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Telecommunications Equipment",
   "desc": "EchoStar  Corporation cotiza en NASDAQ, sector consumo discrecional, industria telecommunications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "CINF": {
   "name": "Cincinnati Financial Corporation",
@@ -3396,10 +3492,11 @@
  },
  "FWONK": {
   "name": "Liberty Media Corporation Series C Liberty Formula One",
-  "sector": "Industrial",
+  "sector": "Servicios de comunicación",
   "industry": "Broadcasting",
   "desc": "Liberty Media Corporation Series C Liberty Formula One cotiza en NASDAQ, sector industrial, industria broadcasting. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "FCNCA": {
   "name": "First Citizens BancShares Inc.",
@@ -3424,10 +3521,11 @@
  },
  "CW": {
   "name": "Curtiss-Wright Corporation",
-  "sector": "Tecnología",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Curtiss-Wright Corporation cotiza en NYSE, sector tecnología, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "SYM": {
   "name": "Symbotic Inc.",
@@ -3445,10 +3543,11 @@
  },
  "FOX": {
   "name": "Fox Corporation",
-  "sector": "Industrial",
+  "sector": "Servicios de comunicación",
   "industry": "Broadcasting",
   "desc": "Fox Corporation cotiza en NASDAQ, sector industrial, industria broadcasting. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "DRI": {
   "name": "Darden Restaurants Inc.",
@@ -3473,17 +3572,19 @@
  },
  "AMRZ": {
   "name": "Amrize Ltd Ordinary Shares",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Building Materials",
   "desc": "Amrize Ltd Ordinary Shares cotiza en NYSE, sector industrial, industria building materials. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "PPG": {
   "name": "PPG Industries Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Materiales",
   "industry": "Paints/Coatings",
   "desc": "PPG Industries Inc. cotiza en NYSE, sector consumo discrecional, industria paints/coatings. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "MRNA": {
   "name": "Moderna Inc.",
@@ -3508,10 +3609,11 @@
  },
  "DLTR": {
   "name": "Dollar Tree Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Department/Specialty Retail Stores",
   "desc": "Dollar Tree Inc. cotiza en NASDAQ, sector consumo discrecional, industria department/specialty retail stores. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "EQR": {
   "name": "Equity Residential Common Shares of Beneficial Interest",
@@ -3529,24 +3631,27 @@
  },
  "ENTG": {
   "name": "Entegris Inc.",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Plastic Products",
   "desc": "Entegris Inc. cotiza en NASDAQ, sector industrial, industria plastic products. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "XPO": {
   "name": "XPO Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Transportation Services",
   "desc": "XPO Inc. cotiza en NYSE, sector consumo discrecional, industria transportation services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "GPN": {
   "name": "Global Payments Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Business Services",
   "desc": "Global Payments Inc. cotiza en NYSE, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "WST": {
   "name": "West Pharmaceutical Services Inc.",
@@ -3599,17 +3704,19 @@
  },
  "CHD": {
   "name": "Church & Dwight Company Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Package Goods/Cosmetics",
   "desc": "Church & Dwight Company Inc. cotiza en NYSE, sector consumo discrecional, industria package goods/cosmetics. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "OMC": {
   "name": "Omnicom Group Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Advertising",
   "desc": "Omnicom Group Inc. cotiza en NYSE, sector consumo discrecional, industria advertising. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "SMCI": {
   "name": "Super Micro Computer Inc.",
@@ -3634,10 +3741,11 @@
  },
  "FWONA": {
   "name": "Liberty Media Corporation Series A Liberty Formula One",
-  "sector": "Industrial",
+  "sector": "Servicios de comunicación",
   "industry": "Broadcasting",
   "desc": "Liberty Media Corporation Series A Liberty Formula One cotiza en NASDAQ, sector industrial, industria broadcasting. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "VLTO": {
   "name": "Veralto Corp",
@@ -3655,10 +3763,11 @@
  },
  "VRSK": {
   "name": "Verisk Analytics Inc.",
-  "sector": "Tecnología",
+  "sector": "Industrial",
   "industry": "EDP Services",
   "desc": "Verisk Analytics Inc. cotiza en NASDAQ, sector tecnología, industria edp services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "SOFI": {
   "name": "SoFi Technologies Inc.",
@@ -3683,17 +3792,19 @@
  },
  "USFD": {
   "name": "US Foods Holding Corp.",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Food Distributors",
   "desc": "US Foods Holding Corp. cotiza en NYSE, sector consumo discrecional, industria food distributors. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "FICO": {
   "name": "Fair Isaac Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Business Services",
   "desc": "Fair Isaac Corporation cotiza en NYSE, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ROKU": {
   "name": "Roku Inc.",
@@ -3718,10 +3829,11 @@
  },
  "RL": {
   "name": "Ralph Lauren Corporation",
-  "sector": "Industrial",
+  "sector": "Consumo discrecional",
   "industry": "Garments and Clothing",
   "desc": "Ralph Lauren Corporation cotiza en NYSE, sector industrial, industria garments and clothing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "L": {
   "name": "Loews Corporation",
@@ -3739,10 +3851,11 @@
  },
  "FFIV": {
   "name": "F5 Inc.",
-  "sector": "Servicios de comunicación",
+  "sector": "Tecnología",
   "industry": "Computer Communications Equipment",
   "desc": "F5 Inc. cotiza en NASDAQ, sector servicios de comunicación, industria computer communications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios de comunicación"
  },
  "PKG": {
   "name": "Packaging Corporation of America",
@@ -3760,17 +3873,19 @@
  },
  "FDXF": {
   "name": "FedEx Freight Holding Company Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Air Freight/Delivery Services",
   "desc": "FedEx Freight Holding Company Inc. cotiza en NYSE, sector consumo discrecional, industria air freight/delivery services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "DOW": {
   "name": "Dow Inc.",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Major Chemicals",
   "desc": "Dow Inc. cotiza en NYSE, sector industrial, industria major chemicals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "FTAI": {
   "name": "FTAI Aviation Ltd.",
@@ -3788,17 +3903,19 @@
  },
  "RIVN": {
   "name": "Rivian Automotive Inc.",
-  "sector": "Industrial",
+  "sector": "Consumo discrecional",
   "industry": "Auto Manufacturing",
   "desc": "Rivian Automotive Inc. cotiza en NASDAQ, sector industrial, industria auto manufacturing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "FIS": {
   "name": "Fidelity National Information Services Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Business Services",
   "desc": "Fidelity National Information Services Inc. cotiza en NYSE, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ULTA": {
   "name": "Ulta Beauty Inc.",
@@ -3830,10 +3947,11 @@
  },
  "WWD": {
   "name": "Woodward Inc.",
-  "sector": "Energía",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Woodward Inc. cotiza en NASDAQ, sector energía, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Energía"
  },
  "BG": {
   "name": "Bunge Limited Common Shares",
@@ -3844,24 +3962,27 @@
  },
  "RS": {
   "name": "Reliance Inc.",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Metal Fabrications",
   "desc": "Reliance Inc. cotiza en NYSE, sector industrial, industria metal fabrications. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "LUV": {
   "name": "Southwest Airlines Company",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Air Freight/Delivery Services",
   "desc": "Southwest Airlines Company cotiza en NYSE, sector consumo discrecional, industria air freight/delivery services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "IP": {
   "name": "International Paper Company",
-  "sector": "Materiales",
+  "sector": "Consumo discrecional",
   "industry": "Paper",
   "desc": "International Paper Company cotiza en NYSE, sector materiales, industria paper. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "THC": {
   "name": "Tenet Healthcare Corporation",
@@ -3872,10 +3993,11 @@
  },
  "IFF": {
   "name": "International Flavors & Fragrances Inc.",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Major Chemicals",
   "desc": "International Flavors & Fragrances Inc. cotiza en NYSE, sector industrial, industria major chemicals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "SITM": {
   "name": "SiTime Corporation",
@@ -3893,17 +4015,19 @@
  },
  "EFX": {
   "name": "Equifax Inc.",
-  "sector": "Financiero",
+  "sector": "Industrial",
   "industry": "Finance: Consumer Services",
   "desc": "Equifax Inc. cotiza en NYSE, sector financiero, industria finance: consumer services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Financiero"
  },
  "SQM": {
   "name": "Sociedad Quimica y Minera S.A.",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Mining & Quarrying of Nonmetallic Minerals (No Fuels)",
   "desc": "Sociedad Quimica y Minera S.A. cotiza en NYSE, sector industrial, industria mining & quarrying of nonmetallic minerals (no fuels). Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "GH": {
   "name": "Guardant Health Inc.",
@@ -3921,10 +4045,11 @@
  },
  "MKSI": {
   "name": "MKS Inc.",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "MKS Inc. cotiza en NASDAQ, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "GIS": {
   "name": "General Mills Inc.",
@@ -3942,10 +4067,11 @@
  },
  "SNA": {
   "name": "Snap-On Incorporated",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Snap-On Incorporated cotiza en NYSE, sector consumo discrecional, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "SNX": {
   "name": "TD SYNNEX Corporation",
@@ -3956,17 +4082,19 @@
  },
  "LYB": {
   "name": "LyondellBasell Industries NV Ordinary Shares Class A (Netherlands)",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Major Chemicals",
   "desc": "LyondellBasell Industries NV Ordinary Shares Class A (Netherlands) cotiza en NYSE, sector industrial, industria major chemicals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "INIO": {
   "name": "INNIO N.V. Ordinary Shares",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Metal Fabrications",
   "desc": "INNIO N.V. Ordinary Shares cotiza en NASDAQ, sector consumo discrecional, industria metal fabrications. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "BCH": {
   "name": "Banco De Chile ADS",
@@ -3984,10 +4112,11 @@
  },
  "FN": {
   "name": "Fabrinet Ordinary Shares",
-  "sector": "Servicios públicos",
+  "sector": "Tecnología",
   "industry": "Telecommunications Equipment",
   "desc": "Fabrinet Ordinary Shares cotiza en NYSE, sector servicios públicos, industria telecommunications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "NI": {
   "name": "NiSource Inc",
@@ -4019,17 +4148,19 @@
  },
  "PAAS": {
   "name": "Pan American Silver Corp.",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Pan American Silver Corp. cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "DD": {
   "name": "DuPont de Nemours Inc.",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Major Chemicals",
   "desc": "DuPont de Nemours Inc. cotiza en NYSE, sector industrial, industria major chemicals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "RCI": {
   "name": "Rogers Communication Inc.",
@@ -4054,17 +4185,19 @@
  },
  "RGLD": {
   "name": "Royal Gold Inc.",
-  "sector": "Industrial",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Royal Gold Inc. cotiza en NASDAQ, sector industrial, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "BR": {
   "name": "Broadridge Financial Solutions Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Business Services",
   "desc": "Broadridge Financial Solutions Inc. cotiza en NYSE, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ONON": {
   "name": "On Holding AG Class A Ordinary Shares",
@@ -4082,10 +4215,11 @@
  },
  "CDE": {
   "name": "Coeur Mining Inc.",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Coeur Mining Inc. cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "ZBH": {
   "name": "Zimmer Biomet Holdings Inc.",
@@ -4110,10 +4244,11 @@
  },
  "APG": {
   "name": "APi Group Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Diversified Commercial Services",
   "desc": "APi Group Corporation cotiza en NYSE, sector consumo discrecional, industria diversified commercial services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "EWBC": {
   "name": "East West Bancorp Inc.",
@@ -4124,10 +4259,11 @@
  },
  "KSPI": {
   "name": "Joint Stock Company Kaspi.kz American Depository Shares",
-  "sector": "Sin clasificar",
+  "sector": "Tecnología",
   "industry": "Sin clasificar",
   "desc": "Joint Stock Company Kaspi.kz American Depository Shares cotiza en NASDAQ, sector sin clasificar, industria sin industria específica. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Sin clasificar"
  },
  "TSCO": {
   "name": "Tractor Supply Company",
@@ -4159,10 +4295,11 @@
  },
  "FTV": {
   "name": "Fortive Corporation",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "Fortive Corporation cotiza en NYSE, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "LSCC": {
   "name": "Lattice Semiconductor Corporation",
@@ -4236,10 +4373,11 @@
  },
  "JHX": {
   "name": "James Hardie Industries plc. Ordinary Shares",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Building Materials",
   "desc": "James Hardie Industries plc. Ordinary Shares cotiza en NYSE, sector industrial, industria building materials. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "PR": {
   "name": "Permian Resources Corporation",
@@ -4257,31 +4395,35 @@
  },
  "AKAM": {
   "name": "Akamai Technologies Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Business Services",
   "desc": "Akamai Technologies Inc. cotiza en NASDAQ, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "NWS": {
   "name": "News Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Newspapers/Magazines",
   "desc": "News Corporation cotiza en NASDAQ, sector consumo discrecional, industria newspapers/magazines. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "CF": {
   "name": "CF Industries Holdings Inc.",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Agricultural Chemicals",
   "desc": "CF Industries Holdings Inc. cotiza en NYSE, sector industrial, industria agricultural chemicals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "INVH": {
   "name": "Invitation Homes Inc.",
-  "sector": "Financiero",
+  "sector": "Bienes raíces",
   "industry": "Real Estate",
   "desc": "Invitation Homes Inc. cotiza en NYSE, sector financiero, industria real estate. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Financiero"
  },
  "OVV": {
   "name": "Ovintiv Inc. (DE)",
@@ -4292,17 +4434,19 @@
  },
  "ZBRA": {
   "name": "Zebra Technologies Corporation",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "Zebra Technologies Corporation cotiza en NASDAQ, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "FLUT": {
   "name": "Flutter Entertainment plc Ordinary Shares",
-  "sector": "Tecnología",
+  "sector": "Consumo discrecional",
   "industry": "Computer Software: Programming Data Processing",
   "desc": "Flutter Entertainment plc Ordinary Shares cotiza en NYSE, sector tecnología, industria computer software: programming data processing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "RBC": {
   "name": "RBC Bearings Incorporated",
@@ -4334,10 +4478,11 @@
  },
  "WCC": {
   "name": "WESCO International Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Telecommunications Equipment",
   "desc": "WESCO International Inc. cotiza en NYSE, sector consumo discrecional, industria telecommunications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "IEX": {
   "name": "IDEX Corporation",
@@ -4362,10 +4507,11 @@
  },
  "CDW": {
   "name": "CDW Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Catalog/Specialty Distribution",
   "desc": "CDW Corporation cotiza en NASDAQ, sector consumo discrecional, industria catalog/specialty distribution. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ROL": {
   "name": "Rollins Inc.",
@@ -4390,10 +4536,11 @@
  },
  "JLL": {
   "name": "Jones Lang LaSalle Incorporated",
-  "sector": "Financiero",
+  "sector": "Bienes raíces",
   "industry": "Real Estate",
   "desc": "Jones Lang LaSalle Incorporated cotiza en NYSE, sector financiero, industria real estate. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Financiero"
  },
  "BEN": {
   "name": "Franklin Resources Inc.",
@@ -4425,10 +4572,11 @@
  },
  "GIB": {
   "name": "CGI Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Professional Services",
   "desc": "CGI Inc. cotiza en NYSE, sector consumo discrecional, industria professional services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "CLH": {
   "name": "Clean Harbors Inc.",
@@ -4446,10 +4594,11 @@
  },
  "PFGC": {
   "name": "Performance Food Group Company",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Food Distributors",
   "desc": "Performance Food Group Company cotiza en NYSE, sector consumo discrecional, industria food distributors. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "NVR": {
   "name": "NVR Inc.",
@@ -4460,10 +4609,11 @@
  },
  "CX": {
   "name": "Cemex S.A.B. de C.V. Sponsored ADR",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Building Materials",
   "desc": "Cemex S.A.B. de C.V. Sponsored ADR cotiza en NYSE, sector industrial, industria building materials. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "DINO": {
   "name": "HF Sinclair Corporation",
@@ -4481,10 +4631,11 @@
  },
  "ARMK": {
   "name": "Aramark",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Restaurants",
   "desc": "Aramark cotiza en NYSE, sector consumo discrecional, industria restaurants. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "KIM": {
   "name": "Kimco Realty Corporation (HC)",
@@ -4495,10 +4646,11 @@
  },
  "BALL": {
   "name": "Ball Corporation",
-  "sector": "Industrial",
+  "sector": "Consumo discrecional",
   "industry": "Containers/Packaging",
   "desc": "Ball Corporation cotiza en NYSE, sector industrial, industria containers/packaging. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "PS": {
   "name": "Pershing Square Inc.",
@@ -4537,10 +4689,11 @@
  },
  "ONTO": {
   "name": "Onto Innovation Inc.",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "Onto Innovation Inc. cotiza en NYSE, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "BSAC": {
   "name": "Banco Santander - Chile ADS",
@@ -4565,17 +4718,19 @@
  },
  "WSE": {
   "name": "Wise Group plc Class A Ordinary Shares",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Diversified Commercial Services",
   "desc": "Wise Group plc Class A Ordinary Shares cotiza en NASDAQ, sector industrial, industria diversified commercial services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "ALB": {
   "name": "Albemarle Corporation",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Major Chemicals",
   "desc": "Albemarle Corporation cotiza en NYSE, sector industrial, industria major chemicals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "JAZZ": {
   "name": "Jazz Pharmaceuticals plc",
@@ -4607,17 +4762,19 @@
  },
  "NWSA": {
   "name": "News Corporation",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Newspapers/Magazines",
   "desc": "News Corporation cotiza en NASDAQ, sector consumo discrecional, industria newspapers/magazines. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "RBA": {
   "name": "RB Global Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Business Services",
   "desc": "RB Global Inc. cotiza en NYSE, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "IREN": {
   "name": "IREN Limited Ordinary Shares",
@@ -4649,17 +4806,19 @@
  },
  "GFL": {
   "name": "GFL Environmental Inc. Subordinate voting shares no par value",
-  "sector": "Servicios públicos",
+  "sector": "Industrial",
   "industry": "Environmental Services",
   "desc": "GFL Environmental Inc. Subordinate voting shares no par value cotiza en NYSE, sector servicios públicos, industria environmental services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "ULS": {
   "name": "UL Solutions Inc.",
-  "sector": "Salud",
+  "sector": "Industrial",
   "industry": "Precision Instruments",
   "desc": "UL Solutions Inc. cotiza en NYSE, sector salud, industria precision instruments. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Salud"
  },
  "LECO": {
   "name": "Lincoln Electric Holdings Inc. Common Shares",
@@ -4677,10 +4836,11 @@
  },
  "STLA": {
   "name": "Stellantis N.V. Common Shares",
-  "sector": "Industrial",
+  "sector": "Consumo discrecional",
   "industry": "Auto Manufacturing",
   "desc": "Stellantis N.V. Common Shares cotiza en NYSE, sector industrial, industria auto manufacturing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "NBIX": {
   "name": "Neurocrine Biosciences Inc.",
@@ -4705,10 +4865,11 @@
  },
  "SWK": {
   "name": "Stanley Black & Decker Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Stanley Black & Decker Inc. cotiza en NYSE, sector consumo discrecional, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ASND": {
   "name": "Ascendis Pharma A/S Ordinary Share",
@@ -4775,10 +4936,11 @@
  },
  "QXO": {
   "name": "QXO Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "RETAIL: Building Materials",
   "desc": "QXO Inc. cotiza en NYSE, sector consumo discrecional, industria retail: building materials. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "COO": {
   "name": "The Cooper Companies Inc.",
@@ -4789,10 +4951,11 @@
  },
  "GRAB": {
   "name": "Grab Holdings Limited Class A Ordinary Shares",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Business Services",
   "desc": "Grab Holdings Limited Class A Ordinary Shares cotiza en NASDAQ, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "CACI": {
   "name": "CACI International Inc.",
@@ -4908,10 +5071,11 @@
  },
  "RPM": {
   "name": "RPM International Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Materiales",
   "industry": "Paints/Coatings",
   "desc": "RPM International Inc. cotiza en NYSE, sector consumo discrecional, industria paints/coatings. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "EQH": {
   "name": "Equitable Holdings Inc.",
@@ -4929,10 +5093,11 @@
  },
  "UHAL": {
   "name": "U-Haul Holding Company",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Rental/Leasing Companies",
   "desc": "U-Haul Holding Company cotiza en NYSE, sector consumo discrecional, industria rental/leasing companies. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "IVZ": {
   "name": "Invesco Ltd",
@@ -4992,24 +5157,27 @@
  },
  "ALLE": {
   "name": "Allegion plc Ordinary Shares",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Diversified Commercial Services",
   "desc": "Allegion plc Ordinary Shares cotiza en NYSE, sector consumo discrecional, industria diversified commercial services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "AGI": {
   "name": "Alamos Gold Inc. Class A Common Shares",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Alamos Gold Inc. Class A Common Shares cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "AUR": {
   "name": "Aurora Innovation Inc.",
-  "sector": "Tecnología",
+  "sector": "Consumo discrecional",
   "industry": "EDP Services",
   "desc": "Aurora Innovation Inc. cotiza en NASDAQ, sector tecnología, industria edp services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "BWA": {
   "name": "BorgWarner Inc.",
@@ -5020,10 +5188,11 @@
  },
  "DTM": {
   "name": "DT Midstream Inc.",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Natural Gas Distribution",
   "desc": "DT Midstream Inc. cotiza en NYSE, sector servicios públicos, industria natural gas distribution. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "AIZ": {
   "name": "Assurant Inc.",
@@ -5090,10 +5259,11 @@
  },
  "PINS": {
   "name": "Pinterest Inc.",
-  "sector": "Tecnología",
+  "sector": "Servicios de comunicación",
   "industry": "Computer Software: Programming Data Processing",
   "desc": "Pinterest Inc. cotiza en NYSE, sector tecnología, industria computer software: programming data processing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "EMBJ": {
   "name": "Embraer S.A.",
@@ -5160,17 +5330,19 @@
  },
  "TRMB": {
   "name": "Trimble Inc.",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "Trimble Inc. cotiza en NASDAQ, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "WMG": {
   "name": "Warner Music Group Corp.",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Services-Misc. Amusement & Recreation",
   "desc": "Warner Music Group Corp. cotiza en NASDAQ, sector consumo discrecional, industria services-misc. amusement & recreation. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "BEPC": {
   "name": "Brookfield Renewable Corporation Brookfield Renewable Corporation Class A Subordinate Voting Shares",
@@ -5181,10 +5353,11 @@
  },
  "AIT": {
   "name": "Applied Industrial Technologies Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Industrial Specialties",
   "desc": "Applied Industrial Technologies Inc. cotiza en NYSE, sector consumo discrecional, industria industrial specialties. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "CRL": {
   "name": "Charles River Laboratories International Inc.",
@@ -5223,24 +5396,27 @@
  },
  "AEIS": {
   "name": "Advanced Energy Industries Inc.",
-  "sector": "Tecnología",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Advanced Energy Industries Inc. cotiza en NASDAQ, sector tecnología, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "AA": {
   "name": "Alcoa Corporation",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Aluminum",
   "desc": "Alcoa Corporation cotiza en NYSE, sector industrial, industria aluminum. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "CSGP": {
   "name": "CoStar Group Inc.",
-  "sector": "Financiero",
+  "sector": "Bienes raíces",
   "industry": "Real Estate",
   "desc": "CoStar Group Inc. cotiza en NASDAQ, sector financiero, industria real estate. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Financiero"
  },
  "SMTC": {
   "name": "Semtech Corporation",
@@ -5258,10 +5434,11 @@
  },
  "RVTY": {
   "name": "Revvity Inc.",
-  "sector": "Industrial",
+  "sector": "Salud",
   "industry": "Biotechnology: Laboratory Analytical Instruments",
   "desc": "Revvity Inc. cotiza en NYSE, sector industrial, industria biotechnology: laboratory analytical instruments. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "AGNC": {
   "name": "AGNC Investment Corp.",
@@ -5293,17 +5470,19 @@
  },
  "CCK": {
   "name": "Crown Holdings Inc.",
-  "sector": "Industrial",
+  "sector": "Consumo discrecional",
   "industry": "Containers/Packaging",
   "desc": "Crown Holdings Inc. cotiza en NYSE, sector industrial, industria containers/packaging. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "GNRC": {
   "name": "Generac Holdlings Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Metal Fabrications",
   "desc": "Generac Holdlings Inc. cotiza en NYSE, sector consumo discrecional, industria metal fabrications. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "SF": {
   "name": "Stifel Financial Corporation",
@@ -5321,10 +5500,11 @@
  },
  "WSO": {
   "name": "Watsco Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Watsco Inc. cotiza en NYSE, sector consumo discrecional, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "HII": {
   "name": "Huntington Ingalls Industries Inc.",
@@ -5363,10 +5543,11 @@
  },
  "CLX": {
   "name": "Clorox Company (The)",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Specialty Chemicals",
   "desc": "Clorox Company (The) cotiza en NYSE, sector consumo discrecional, industria specialty chemicals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "SEIC": {
   "name": "SEI Investments Company",
@@ -5461,24 +5642,27 @@
  },
  "HL": {
   "name": "Hecla Mining Company",
-  "sector": "Industrial",
+  "sector": "Metales preciosos",
   "industry": "Mining & Quarrying of Nonmetallic Minerals (No Fuels)",
   "desc": "Hecla Mining Company cotiza en NYSE, sector industrial, industria mining & quarrying of nonmetallic minerals (no fuels). Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "HMY": {
   "name": "Harmony Gold Mining Company Limited",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Harmony Gold Mining Company Limited cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "PAC": {
   "name": "Grupo Aeroportuario Del Pacifico S.A. B. de C.V. Grupo Aeroportuario Del Pacifico S.A. de C.V. (each representing 10 Series B shares)",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Aerospace",
   "desc": "Grupo Aeroportuario Del Pacifico S.A. B. de C.V. Grupo Aeroportuario Del Pacifico S.A. de C.V. (each representing 10 Series B shares) cotiza en NYSE, sector consumo discrecional, industria aerospace. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "PNW": {
   "name": "Pinnacle West Capital Corporation",
@@ -5545,17 +5729,19 @@
  },
  "CHYM": {
   "name": "Chime Financial Inc.",
-  "sector": "Financiero",
+  "sector": "Tecnología",
   "industry": "Finance: Consumer Services",
   "desc": "Chime Financial Inc. cotiza en NASDAQ, sector financiero, industria finance: consumer services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Financiero"
  },
  "FPS": {
   "name": "Forgent Power Solutions Inc.",
-  "sector": "Energía",
+  "sector": "Industrial",
   "industry": "Industrial Machinery/Components",
   "desc": "Forgent Power Solutions Inc. cotiza en NYSE, sector energía, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Energía"
  },
  "TFII": {
   "name": "TFI International Inc. Common Shares",
@@ -5580,10 +5766,11 @@
  },
  "BJ": {
   "name": "BJ's Wholesale Club Holdings Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Consumo básico",
   "industry": "Department/Specialty Retail Stores",
   "desc": "BJ's Wholesale Club Holdings Inc. cotiza en NYSE, sector consumo discrecional, industria department/specialty retail stores. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ENLT": {
   "name": "Enlight Renewable Energy Ltd. Ordinary Shares",
@@ -5664,10 +5851,11 @@
  },
  "LFUS": {
   "name": "Littelfuse Inc.",
-  "sector": "Energía",
+  "sector": "Tecnología",
   "industry": "Electrical Products",
   "desc": "Littelfuse Inc. cotiza en NASDAQ, sector energía, industria electrical products. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Energía"
  },
  "UMBF": {
   "name": "UMB Financial Corporation",
@@ -5727,17 +5915,19 @@
  },
  "IT": {
   "name": "Gartner Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Other Consumer Services",
   "desc": "Gartner Inc. cotiza en NYSE, sector consumo discrecional, industria other consumer services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "VSAT": {
   "name": "ViaSat Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Telecommunications Equipment",
   "desc": "ViaSat Inc. cotiza en NASDAQ, sector consumo discrecional, industria telecommunications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "MGM": {
   "name": "MGM Resorts International",
@@ -5748,17 +5938,19 @@
  },
  "WMS": {
   "name": "Advanced Drainage Systems Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Containers/Packaging",
   "desc": "Advanced Drainage Systems Inc. cotiza en NYSE, sector consumo discrecional, industria containers/packaging. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "PSKY": {
   "name": "Paramount Skydance Corporation",
-  "sector": "Industrial",
+  "sector": "Servicios de comunicación",
   "industry": "Broadcasting",
   "desc": "Paramount Skydance Corporation cotiza en NASDAQ, sector industrial, industria broadcasting. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "BPOP": {
   "name": "Popular Inc.",
@@ -5846,10 +6038,11 @@
  },
  "CGNX": {
   "name": "Cognex Corporation",
-  "sector": "Industrial",
+  "sector": "Tecnología",
   "industry": "Industrial Machinery/Components",
   "desc": "Cognex Corporation cotiza en NASDAQ, sector industrial, industria industrial machinery/components. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "WTFC": {
   "name": "Wintrust Financial Corporation",
@@ -5937,17 +6130,19 @@
  },
  "AYI": {
   "name": "Acuity Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Building Products",
   "desc": "Acuity Inc. cotiza en NYSE, sector consumo discrecional, industria building products. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "AM": {
   "name": "Antero Midstream Corporation",
-  "sector": "Servicios públicos",
+  "sector": "Energía",
   "industry": "Natural Gas Distribution",
   "desc": "Antero Midstream Corporation cotiza en NYSE, sector servicios públicos, industria natural gas distribution. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Servicios públicos"
  },
  "RYAN": {
   "name": "Ryan Specialty Holdings Inc.",
@@ -5965,10 +6160,11 @@
  },
  "GSAT": {
   "name": "Globalstar Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Telecommunications Equipment",
   "desc": "Globalstar Inc. cotiza en NASDAQ, sector consumo discrecional, industria telecommunications equipment. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "SMMT": {
   "name": "Summit Therapeutics Inc.",
@@ -6028,10 +6224,11 @@
  },
  "AES": {
   "name": "The AES Corporation",
-  "sector": "Industrial",
+  "sector": "Servicios públicos",
   "industry": "Electric Utilities: Central",
   "desc": "The AES Corporation cotiza en NYSE, sector industrial, industria electric utilities: central. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "GIL": {
   "name": "Gildan Activewear Inc. Class A Sub. Vot.",
@@ -6063,17 +6260,19 @@
  },
  "IAG": {
   "name": "Iamgold Corporation Ordinary Shares",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Iamgold Corporation Ordinary Shares cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "NYT": {
   "name": "New York Times Company (The)",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Newspapers/Magazines",
   "desc": "New York Times Company (The) cotiza en NYSE, sector consumo discrecional, industria newspapers/magazines. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "ONB": {
   "name": "Old National Bancorp",
@@ -6091,10 +6290,11 @@
  },
  "EGO": {
   "name": "Eldorado Gold Corporation Ordinary Shares",
-  "sector": "Materiales",
+  "sector": "Metales preciosos",
   "industry": "Precious Metals",
   "desc": "Eldorado Gold Corporation Ordinary Shares cotiza en NYSE, sector materiales, industria precious metals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Materiales"
  },
  "ORI": {
   "name": "Old Republic International Corporation",
@@ -6140,10 +6340,11 @@
  },
  "PSO": {
   "name": "Pearson Plc",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Books",
   "desc": "Pearson Plc cotiza en NYSE, sector consumo discrecional, industria books. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "SAIA": {
   "name": "Saia Inc.",
@@ -6189,17 +6390,19 @@
  },
  "WLK": {
   "name": "Westlake Corporation",
-  "sector": "Industrial",
+  "sector": "Materiales",
   "industry": "Major Chemicals",
   "desc": "Westlake Corporation cotiza en NYSE, sector industrial, industria major chemicals. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Industrial"
  },
  "R": {
   "name": "Ryder System Inc.",
-  "sector": "Consumo discrecional",
+  "sector": "Industrial",
   "industry": "Rental/Leasing Companies",
   "desc": "Ryder System Inc. cotiza en NYSE, sector consumo discrecional, industria rental/leasing companies. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "LTH": {
   "name": "Life Time Group Holdings Inc.",
@@ -6217,17 +6420,19 @@
  },
  "PAYP": {
   "name": "PayPay Corporation American Depository Shares",
-  "sector": "Consumo discrecional",
+  "sector": "Tecnología",
   "industry": "Business Services",
   "desc": "PayPay Corporation American Depository Shares cotiza en NASDAQ, sector consumo discrecional, industria business services. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "FDS": {
   "name": "FactSet Research Systems Inc.",
-  "sector": "Tecnología",
+  "sector": "Financiero",
   "industry": "Computer Software: Programming Data Processing",
   "desc": "FactSet Research Systems Inc. cotiza en NYSE, sector tecnología, industria computer software: programming data processing. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Tecnología"
  },
  "PTGX": {
   "name": "Protagonist Therapeutics Inc.",
@@ -6245,10 +6450,11 @@
  },
  "LLYVK": {
   "name": "Liberty Live Holdings Inc. Series C Liberty Live Group",
-  "sector": "Consumo discrecional",
+  "sector": "Servicios de comunicación",
   "industry": "Services-Misc. Amusement & Recreation",
   "desc": "Liberty Live Holdings Inc. Series C Liberty Live Group cotiza en NASDAQ, sector consumo discrecional, industria services-misc. amusement & recreation. Descripción generada automáticamente desde el screener (no es un resumen editorial del negocio).",
-  "universe": "Large Cap ($10B-$200B)"
+  "universe": "Large Cap ($10B-$200B)",
+  "sector_anterior": "Consumo discrecional"
  },
  "HSIC": {
   "name": "Henry Schein Inc.",
