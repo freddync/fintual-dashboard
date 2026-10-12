@@ -40,6 +40,7 @@ PRECIOS_DIR = os.path.join(DATA_DIR, "precios")
 FUND_DIR = os.path.join(DATA_DIR, "fundamentales")
 
 RSI_PERIOD, RSI_ALTO, RSI_BAJO = 5, 70, 30
+COMISION = 0.001   # Fintual cobra 0,1% sobre el total transado en cada compra y en cada venta
 MACD_FAST, MACD_SLOW, MACD_SIGNAL = 6, 13, 5
 COL_RSI = f"RSI {RSI_PERIOD}"
 RETORNOS = {"1m %": 21, "3m %": 63, "6m %": 126, "1a %": 252}
@@ -1208,8 +1209,8 @@ if vista == "General":
                 else:
                     tvv = tabla_senales(vend, nombres, provisional, ult)
                     mostrar_tabla(tvv, "tabla_vendidas", 5, height=min(500, 38 + 35 * len(tvv)))
-                st.caption("**Retorno %** = desde la compra hasta el precio actual (o la venta), descontando 0,1% de "
-                           "costo. Es la aplicación de un backtest, no una recomendación de inversión.")
+                st.caption("**Retorno %** = desde la compra hasta el precio actual (o la venta), descontando la comisión de "
+                           "0,1% en la compra y 0,1% en la venta. Es la aplicación de un backtest, no una recomendación de inversión.")
 
 
 # ---------------------------------------------------------------------------
@@ -1252,8 +1253,8 @@ elif vista == "Mi cartera":
             t = pos["ticker"]
             act = precios_hoy["Precio"].get(t, np.nan)
             rsi_t = precios_hoy[COL_RSI].get(t, np.nan)
-            invertido = pos["cantidad"] * pos["precio"]
-            valor = pos["cantidad"] * act
+            invertido = pos["cantidad"] * pos["precio"] * (1 + COMISION)      # lo pagado, con comisión de compra
+            valor = pos["cantidad"] * act * (1 - COMISION)                     # lo que recibirías al vender hoy
             cruzados = [u for u in UMBRALES_VENTA if pd.notna(rsi_t) and rsi_t > u]
             # stop: si desde la compra algún mínimo diario tocó el nivel (o el precio actual está bajo él)
             nivel = pos["precio"] * (1 - stop_cart / 100) if stop_cart else np.nan
@@ -1271,7 +1272,7 @@ elif vista == "Mi cartera":
                 senal = "🟢 Mantener"
             filas_c.append({
                 "Ticker": t, "Nombre": precios_hoy["Nombre"].get(t, t),
-                "Ganancia $": valor - invertido, "Ganancia %": (act / pos["precio"] - 1) * 100,
+                "Ganancia $": valor - invertido, "Ganancia %": (valor / invertido - 1) * 100,
                 "Señal de venta": senal, COL_RSI: rsi_t,
                 "Fecha compra": pd.Timestamp(pos["fecha"]),
                 "Días": (pd.Timestamp.now().normalize() - pd.Timestamp(pos["fecha"])).days,
@@ -1302,17 +1303,19 @@ elif vista == "Mi cartera":
                    f"🟠 = el RSI superó otro de los umbrales ({', '.join(map(str, UMBRALES_VENTA))}) pero no el tuyo. "
                    "**Dist. al stop** = cuánto le falta al precio para tocarlo. Ojo: el stop no protege de los saltos "
                    "de un día para otro (si la acción abre bajo el stop, la venta será a ese precio menor). Montos en "
-                   "la moneda en que registraste el precio.")
+                   f"la moneda en que registraste el precio. **Comisión Fintual {COMISION:.1%}**: **Invertido** incluye la "
+                   "comisión de compra y **Valor actual** descuenta la de venta (lo que recibirías si vendieras hoy), así "
+                   "que la **Ganancia** ya es neta de ambas.")
 
     # ---- comparación con SPY ----
     todas = cart["posiciones"] + cart["vendidas"]
     if todas:
         st.subheader("Tu cartera vs. SPY")
-        invertido_total = sum(x["cantidad"] * x["precio"] for x in todas)
+        invertido_total = sum(x["cantidad"] * x["precio"] for x in todas) * (1 + COMISION)
         valor_abiertas = sum(x["cantidad"] * (precios_hoy["Precio"].get(x["ticker"], np.nan)
                                               if pd.notna(precios_hoy["Precio"].get(x["ticker"], np.nan))
-                                              else x["precio"]) for x in cart["posiciones"])
-        cobrado_ventas = sum(x["cantidad"] * x["precio_venta"] for x in cart["vendidas"])
+                                              else x["precio"]) for x in cart["posiciones"]) * (1 - COMISION)
+        cobrado_ventas = sum(x["cantidad"] * x["precio_venta"] for x in cart["vendidas"]) * (1 - COMISION)
         valor_cartera = valor_abiertas + cobrado_ventas
         fecha0 = min(pd.Timestamp(x["fecha"]) for x in todas)
         bench, err_b = cargar_benchmark(fecha0.date().isoformat(), VERSION_OPCIONES)
@@ -1320,9 +1323,9 @@ elif vista == "Mi cartera":
             st.caption(f"No se pudo calcular el benchmark SPY: {err_b}")
         else:
             f_spy, apertura_spy, factor_spy, ultimo_spy = bench
-            valor_spy = invertido_total * factor_spy
+            valor_spy = invertido_total / (1 + COMISION) * factor_spy * (1 - COMISION)   # mismas comisiones en SPY
             ret_c = (valor_cartera / invertido_total - 1) * 100
-            ret_s = (factor_spy - 1) * 100
+            ret_s = (valor_spy / invertido_total - 1) * 100
             b = st.columns(3)
             b[0].metric("Tu cartera", f"${valor_cartera:,.2f}", f"{ret_c:+.2f}%")
             b[1].metric(f"SPY desde el {f_spy:%d-%m-%Y}", f"${valor_spy:,.2f}", f"{ret_s:+.2f}%")
@@ -1336,7 +1339,8 @@ elif vista == "Mi cartera":
                 f"**Benchmark:** los mismos ${invertido_total:,.2f} que invertiste en total, comprados de una vez "
                 f"en SPY a la apertura del {f_spy:%d-%m-%Y} (tu compra más antigua; precio US$ {apertura_spy:,.2f}), "
                 f"con dividendos reinvertidos. Último precio SPY: US$ {ultimo_spy:,.2f}. **Tu cartera:** valor actual "
-                "de las posiciones abiertas + lo cobrado en ventas (no incluye impuestos ni costos de cambio). "
+                f"de las posiciones abiertas + lo cobrado en ventas. Ambos lados con la comisión de {COMISION:.1%} en la compra y "
+                "en la venta (sin impuestos ni costos de cambio). "
                 "Ojo: el benchmark supone todo el dinero invertido desde el primer día; si fuiste comprando de a "
                 "poco, SPY tuvo más tiempo el dinero trabajando, así que la comparación es exigente para tu cartera.")
 
@@ -1391,12 +1395,12 @@ elif vista == "Mi cartera":
         st.subheader("Historial de ventas")
         hv = pd.DataFrame([{
             "Ticker": v["ticker"], "Nombre": precios_hoy["Nombre"].get(v["ticker"], v["ticker"]),
-            "Ganancia $": v["cantidad"] * (v["precio_venta"] - v["precio"]),
-            "Ganancia %": (v["precio_venta"] / v["precio"] - 1) * 100,
+            "Ganancia $": v["cantidad"] * (v["precio_venta"] * (1 - COMISION) - v["precio"] * (1 + COMISION)),
+            "Ganancia %": (v["precio_venta"] * (1 - COMISION) / (v["precio"] * (1 + COMISION)) - 1) * 100,
             "Fecha compra": pd.Timestamp(v["fecha"]), "Fecha venta": pd.Timestamp(v["fecha_venta"]),
             "Días": (pd.Timestamp(v["fecha_venta"]) - pd.Timestamp(v["fecha"])).days,
             "Cantidad": v["cantidad"], "Precio compra": v["precio"], "Precio venta": v["precio_venta"],
-            "Invertido": v["cantidad"] * v["precio"],
+            "Invertido": v["cantidad"] * v["precio"] * (1 + COMISION),
         } for v in cart["vendidas"]]).sort_values("Fecha venta", ascending=False)
         k = st.columns(3)
         k[0].metric("Ventas", f"{len(hv)}", f"{(hv['Ganancia %'] > 0).mean() * 100:.0f}% con ganancia",

@@ -176,7 +176,8 @@ def _op(ticker, fechas, aper, i_senal, i_ent, i_sal, precio_sal, costo, abierta)
         "Precio entrada": aper[i_ent],
         "Precio salida": precio_sal,
         "Días": int(i_sal - i_ent),
-        "Retorno %": (precio_sal / aper[i_ent] - 1) * 100 - costo,
+        # comisión `costo` % sobre el total transado, en la compra y en la venta
+        "Retorno %": (precio_sal * (1 - costo / 100) / (aper[i_ent] * (1 + costo / 100)) - 1) * 100,
         "Abierta": abierta,
     }
 
