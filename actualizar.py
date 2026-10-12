@@ -60,6 +60,10 @@ def get_json(url, params, reintentos=3):
     return None
 
 
+# ETF de referencia para el análisis sectorial (se guardan junto a los precios; no son parte del universo)
+ETFS = ["SPY", "XLK", "XLF", "XLE", "XLV", "XLY", "XLP", "XLI", "XLB", "XLU", "XLRE", "XLC", "GDX"]
+
+
 def tickers():
     with open(COMPANY_INFO, encoding="utf-8") as f:
         return sorted(json.load(f).keys())
@@ -118,6 +122,11 @@ def actualizar_precios():
             if i % 100 == 0 or i == len(lista):
                 print(f"  [{i}/{len(lista)}] ok={ok} fallidos={len(fallidos)}", flush=True)
 
+    for t in ETFS:                       # no cuentan para el umbral de fallas
+        df = bajar_precios(t)
+        if df is not None:
+            df.to_csv(os.path.join(PRECIOS_DIR, f"{t}.csv"), index=False, lineterminator="\n")
+        time.sleep(PAUSA)
     if fallidos:
         print("Fallidos (se conserva su archivo anterior):", ", ".join(fallidos))
     if len(fallidos) > 0.2 * len(lista):

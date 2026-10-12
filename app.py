@@ -603,9 +603,26 @@ COLOR_CUADRANTE = {"Liderando": "#3ecf8e", "Debilitándose": "#e6b45e",
                    "Rezagado": "#ef5a6f", "Mejorando": "#5ea8e6"}
 
 
+FUENTE_ETF = "ETF sectoriales"
+
+
+def precios_etf():
+    """{sector: df} de los ETF de referencia disponibles, y el df del mercado (SPY)."""
+    etf = {sec_: df for sec_, t in sectores.ETF_SECTOR.items() if (df := cargar_precios(t)) is not None}
+    return etf, cargar_precios(sectores.ETF_MERCADO)
+
+
 @st.cache_data(show_spinner="Calculando la rotación sectorial...")
-def datos_sectores(frecuencia, universos, _sello_key, version=""):
-    """Series por sector + RRG del universo elegido (`_sello_key` invalida al llegar precios nuevos)."""
+def datos_sectores(frecuencia, universos, _sello_key, version="", fuente="Universo"):
+    """Series por sector + RRG del universo elegido (`_sello_key` invalida al llegar precios nuevos).
+    Con `fuente` = ETF sectoriales, cada sector es su ETF y el mercado es SPY."""
+    if fuente == FUENTE_ETF:
+        etf, spy = precios_etf()
+        cierre, dolares = sectores.paneles(etf, frecuencia)
+        c_spy, _ = sectores.paneles({"SPY": spy}, frecuencia)
+        s = sectores.series_etf(cierre, dolares, c_spy["SPY"], frecuencia)
+        ratio, mom = sectores.rrg(s["rs"], frecuencia)
+        return s, ratio, mom
     info_ = cargar_info()
     tickers = [t for t, i in info_.items() if i.get("universe") in universos]
     precios = {t: df for t in tickers if (df := cargar_precios(t)) is not None}
@@ -617,8 +634,12 @@ def datos_sectores(frecuencia, universos, _sello_key, version=""):
 
 
 @st.cache_data(show_spinner="Comparando el mismo tramo de cada período...")
-def datos_tramos(periodo, n, universos, _sello_key, version=""):
+def datos_tramos(periodo, n, universos, _sello_key, version="", fuente="Universo"):
     """Ranking y participación de volumen por sector en el mismo tramo del período en curso y los n anteriores."""
+    if fuente == FUENTE_ETF:
+        etf, _ = precios_etf()
+        cierre, dolares = sectores.paneles(etf, "Diaria")
+        return sectores.tramos(cierre, dolares, {x: x for x in cierre.columns}, periodo, n, min_empresas=1)
     info_ = cargar_info()
     precios = {t: df for t, i in info_.items() if i.get("universe") in universos and (df := cargar_precios(t)) is not None}
     cierre, dolares = sectores.paneles(precios, "Diaria")
@@ -658,7 +679,7 @@ def correr_backtest(compra, venta, costo, universos, _sello_key, version="", ent
 UMBRAL_SECTOR = {
     "Tecnología": 20, "Industrial": 20, "Consumo discrecional": 20, "Financiero": 20,
     "Bienes raíces": 30, "Energía": 30, "Consumo básico": 30,
-    "Servicios públicos": 40, "Materiales": 40,
+    "Servicios públicos": 40, "Materiales": 40, "Metales preciosos": 40,
 }   # Salud y Servicios de comunicación quedan fuera: la señal no les agregó valor
 CUADRANTES_EXCLUIDOS = {"Debilitándose"}   # sector perdiendo fuerza: la señal rinde la mitad
 # Filtro SMA 200 por tipo de acción: las cíclicas rinden mejor si la señal ocurre BAJO su media de 200
@@ -1402,6 +1423,15 @@ elif vista == "Sectores":
                "pesa lo mismo dentro de su sector. 'Mercado' = promedio de todas las empresas del universo "
                "elegido a la izquierda (el filtro de sector no aplica aquí).")
 
+    fuente = st.radio("Fuente", ["Universo", FUENTE_ETF], horizontal=True, key="fuente_sect",
+                      format_func=lambda x: "Universo (igual peso)" if x == "Universo" else x,
+                      help="**Universo**: cada sector es el promedio igual-ponderado de las acciones del universo elegido "
+                           "(mide a la acción típica del sector). **ETF sectoriales**: cada sector es su ETF SPDR (XLK, XLF, "
+                           "XLE...; metales preciosos con GDX) contra SPY, ponderado por capitalización (pesan más las "
+                           "gigantes). El volumen de un ETF incluye coberturas y arbitraje, no solo inversión.")
+    if fuente == FUENTE_ETF:
+        st.caption("Fuente: **ETF sectoriales** · " + " · ".join(f"{k} = {v}" for k, v in sectores.ETF_SECTOR.items())
+                   + " · mercado = SPY. Sin '% al alza' (un ETF no tiene amplitud).")
     pest_sect = ["🔄 Rotación sectorial", "📅 Semana, mes y día a día", "🧭 Qué está moviendo la rotación"]
     if st.session_state.get("tabs_sectores") not in pest_sect:
         st.session_state.pop("tabs_sectores", None)
@@ -1409,8 +1439,8 @@ elif vista == "Sectores":
 
     with tab_rot:
         frec = st.radio("Frecuencia", ["Diaria", "Semanal", "Mensual"], horizontal=True, key="frec_sect")
-        s, ratio, mom = datos_sectores(frec, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
-        fechas = list(s["rs"].index[-60:])
+        s, ratio, mom = datos_sectores(frec, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES, fuente)
+        fechas = list(s["rs"].dropna(how="all").index[-60:])
         en_curso = periodo_en_curso(fechas[-1], frec)
         formato = {"Diaria": "{:%d-%b-%Y}", "Semanal": "semana al {:%d-%b-%Y}", "Mensual": "{:%b-%Y}"}[frec]
         etiqueta = {f: formato.format(f)
@@ -1423,7 +1453,17 @@ elif vista == "Sectores":
                        "el volumen relativo sale bajo. Para comparar volumen, usa el último período completo.")
 
         tb = sectores.tabla(s, ratio, mom, fecha, frec)
-        numericas = ["Retorno %", "vs mercado (pp)", "Δ participación (pp)", "Relativo 1m %", "Relativo 3m %"]
+        # amplitud = retorno vs mercado del universo igual peso − el del ETF del sector (mismo período)
+        s_u, _, _ = datos_sectores(frec, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES, "Universo")
+        s_e, _, _ = datos_sectores(frec, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES, FUENTE_ETF)
+        tb.insert(tb.columns.get_loc("vs mercado (pp)") + 1, "Amplitud (pp)",
+                  [s_u["rel"].at[fecha, x] - s_e["rel"].at[fecha, x]
+                   if fecha in s_u["rel"].index and fecha in s_e["rel"].index and x in s_u["rel"].columns
+                   and x in s_e["rel"].columns else np.nan for x in tb["Sector"]])
+        if fuente == FUENTE_ETF:
+            tb = tb.drop(columns=["Empresas", "% al alza"])
+            tb.insert(1, "ETF", tb["Sector"].map(sectores.ETF_SECTOR))
+        numericas = ["Retorno %", "vs mercado (pp)", "Amplitud (pp)", "Δ participación (pp)", "Relativo 1m %", "Relativo 3m %"]
         st.dataframe(
             tb.style.map(colorear_num, subset=numericas)
                     .map(lambda v: f"color: {COLOR_CUADRANTE.get(v, '')}; font-weight: 600", subset=["Cuadrante"])
@@ -1431,6 +1471,10 @@ elif vista == "Sectores":
             hide_index=True, width="stretch", column_config={
                 "Retorno %": st.column_config.NumberColumn(format="%+.2f%%"),
                 "vs mercado (pp)": st.column_config.NumberColumn(format="%+.2f"),
+                "Amplitud (pp)": st.column_config.NumberColumn(
+                    format="%+.2f", help="Retorno vs mercado del sector en el universo (igual peso) menos el de su ETF. "
+                                         "Positivo = la acción típica del sector lo hizo mejor que el ETF (subida amplia); "
+                                         "negativo = el ETF lo sostienen unas pocas gigantes. Es descriptivo: no anticipa."),
                 "% al alza": st.column_config.ProgressColumn(format="%.0f%%", min_value=0, max_value=100),
                 "Vol. relativo": st.column_config.NumberColumn(format="%.2fx"),
                 "Part. volumen %": st.column_config.NumberColumn(format="%.1f%%"),
@@ -1461,8 +1505,8 @@ elif vista == "Sectores":
             "Mejorando es candidato a recibir la próxima rotación.")
 
         st.subheader("Mapa de calor: cómo ha ido rotando")
-        metrica = st.radio("Métrica", ["Retorno vs mercado (pp)", "Δ participación de volumen (pp)",
-                                       "Amplitud (% al alza)"], horizontal=True)
+        metrica = st.radio("Métrica", ["Retorno vs mercado (pp)", "Δ participación de volumen (pp)"]
+                           + ([] if fuente == FUENTE_ETF else ["Amplitud (% al alza)"]), horizontal=True)
         clave = {"Retorno vs mercado (pp)": "rel", "Δ participación de volumen (pp)": "d_part",
                  "Amplitud (% al alza)": "alza"}[metrica]
         st.plotly_chart(grafico_calor(s[clave], fecha, frec, clave), width="stretch")
@@ -1478,7 +1522,7 @@ elif vista == "Sectores":
             per = c1.radio("Comparar", ["Mes", "Semana", "Día"], horizontal=True, key="tramo_periodo")
             n_per = c2.select_slider("Períodos anteriores", [3, 4, 5, 6, 8, 10, 12, 20],
                                   value={"Mes": 6, "Semana": 8, "Día": 5}[per], key=f"tramo_n_{per}")
-            tr = datos_tramos(per, n_per, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+            tr = datos_tramos(per, n_per, tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES, fuente)
             k, et = tr["k"], tr["etiquetas"]
             unidad = {"Mes": "del mes", "Semana": "de la semana", "Día": ""}[per]
             if per == "Día":
@@ -1542,7 +1586,7 @@ elif vista == "Sectores":
         else:
             ventana_m = st.radio("Ventana", ["6M", "1A", "2A", "5A"], index=1, horizontal=True, key="ventana_macro")
             desde = pd.Timestamp.now().normalize() - pd.DateOffset(months={"6M": 6, "1A": 12, "2A": 24, "5A": 60}[ventana_m])
-            sd, _, _ = datos_sectores("Diaria", tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES)
+            sd, _, _ = datos_sectores("Diaria", tuple(sorted(sel_uni)), json.dumps(sello), VERSION_OPCIONES, fuente)
             macro, err_m = cargar_macro(VERSION_OPCIONES)
             if err_m:
                 st.caption(f"Algunas series macro no se pudieron cargar: {err_m}")

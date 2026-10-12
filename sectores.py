@@ -141,11 +141,35 @@ def tabla(s, ratio, mom, fecha, frecuencia):
 # Mismo tramo: semana a semana / mes a mes
 # ---------------------------------------------------------------------------
 
+# ETF de referencia de cada sector (SPDR; metales preciosos con el ETF de mineras de oro) y del mercado
+ETF_SECTOR = {"Tecnología": "XLK", "Financiero": "XLF", "Energía": "XLE", "Salud": "XLV",
+              "Consumo discrecional": "XLY", "Consumo básico": "XLP", "Industrial": "XLI", "Materiales": "XLB",
+              "Servicios públicos": "XLU", "Bienes raíces": "XLRE", "Servicios de comunicación": "XLC",
+              "Metales preciosos": "GDX"}
+ETF_MERCADO = "SPY"
+
+
+def series_etf(cierre, dolares, cierre_mercado, frecuencia):
+    """Lo mismo que `series`, pero cada sector es su ETF (columnas = sectores) y el mercado es SPY.
+    La amplitud (% al alza) no existe para un ETF: queda vacía."""
+    ret_sec = cierre.pct_change(fill_method=None)
+    ret_mkt = cierre_mercado.pct_change(fill_method=None).reindex(ret_sec.index)
+    part = dolares.div(dolares.sum(axis=1), axis=0) * 100
+    v = VENTANA_VOL[frecuencia]
+    prom_part = part.shift(1).rolling(v, min_periods=5).mean()
+    prom_dv = dolares.shift(1).rolling(v, min_periods=5).mean()
+    rs = (1 + ret_sec.fillna(0)).cumprod().div((1 + ret_mkt.fillna(0)).cumprod(), axis=0)
+    return {"ret": ret_sec * 100, "rel": ret_sec.sub(ret_mkt, axis=0) * 100,
+            "alza": pd.DataFrame(index=ret_sec.index, columns=ret_sec.columns, dtype=float),
+            "vol_rel": dolares / prom_dv, "part": part, "d_part": part - prom_part, "rs": rs,
+            "n": pd.Series(1, index=ret_sec.columns)}
+
+
 MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
 
 
-def tramos(cierre, dolares, sector_de, periodo, n):
+def tramos(cierre, dolares, sector_de, periodo, n, min_empresas=MIN_EMPRESAS):
     """Compara el período en curso con los `n` anteriores usando el MISMO tramo: si hoy van k ruedas
     del mes (o de la semana), de cada período se toman sus primeras k ruedas.
     `cierre` y `dolares` son diarios. Devuelve dict con DataFrames sectores x períodos
@@ -153,7 +177,7 @@ def tramos(cierre, dolares, sector_de, periodo, n):
     más k (ruedas del tramo) y etiquetas de cada período."""
     sector_de = pd.Series(sector_de).reindex(cierre.columns)
     conteo = sector_de.value_counts()
-    sector_de = sector_de[sector_de.isin(conteo[conteo >= MIN_EMPRESAS].index)]
+    sector_de = sector_de[sector_de.isin(conteo[conteo >= min_empresas].index)]
     cierre, dolares = cierre[sector_de.index], dolares[sector_de.index]
     ret = cierre.pct_change(fill_method=None).clip(-0.5, 0.5)
     ret_sec = ret.T.groupby(sector_de).mean().T
