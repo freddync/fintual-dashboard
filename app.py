@@ -874,8 +874,9 @@ def colorear_num(v):
     return ""
 
 
-def grafico_rrg(ratio, mom, fecha, cola=6):
-    """Gráfico de rotación relativa: cada sector con su cola de los últimos períodos."""
+def grafico_rrg(ratio, mom, fecha, cola=6, limites=None):
+    """Gráfico de rotación relativa: cada sector con su cola de los últimos períodos.
+    `limites` = (dx, dy) fijos alrededor de 100, para que los ejes no cambien al mover el período."""
     r, m = ratio.loc[:fecha].tail(cola), mom.loc[:fecha].tail(cola)
     fig = go.Figure()
     colores = px_colores()
@@ -891,8 +892,11 @@ def grafico_rrg(ratio, mom, fecha, cola=6):
         fig.add_annotation(x=x.iloc[-1], y=y.iloc[-1], text=sec, showarrow=False, yshift=12,
                            font=dict(size=10, color=c))
     # cuadrantes simétricos alrededor de 100
-    dx = max(abs(r.stack() - 100).max(), 0.5) * 1.15
-    dy = max(abs(m.stack() - 100).max(), 0.5) * 1.15
+    if limites:
+        dx, dy = limites
+    else:
+        dx = max(abs(r.stack() - 100).max(), 0.5) * 1.15
+        dy = max(abs(m.stack() - 100).max(), 0.5) * 1.15
     for x0, x1, y0, y1, txt, c, xa, ya in [
             (100, 100 + dx, 100, 100 + dy, "Liderando", "#3ecf8e", "right", "top"),
             (100, 100 + dx, 100 - dy, 100, "Debilitándose", "#e6b45e", "right", "bottom"),
@@ -953,13 +957,13 @@ def cargar_macro(version=""):
     return series, ", ".join(errores)
 
 
-def grafico_calor(df, fecha, frecuencia, clave):
-    """Sectores (filas) x últimos períodos (columnas)."""
+def grafico_calor(df, fecha, frecuencia, clave, lim=None):
+    """Sectores (filas) x últimos períodos (columnas). `lim` fija la escala de color."""
     d = df.loc[:fecha].tail(N_CALOR)
     d = d[d.iloc[-1].sort_values(ascending=False).index]          # el mejor del período, arriba
     x = [f"{f:%b-%y}" if frecuencia == "Mensual" else f"{f:%d-%b}" for f in d.index]
     centro = 50 if clave == "alza" else 0
-    lim = (d - centro).abs().quantile(0.95).max() or 1
+    lim = lim or (d - centro).abs().quantile(0.95).max() or 1
     fig = go.Figure(go.Heatmap(
         z=d.T.values, x=x, y=list(d.columns), colorscale="RdYlGn", zmid=centro,
         zmin=centro - lim, zmax=centro + lim, xgap=1, ygap=1,
@@ -1499,7 +1503,11 @@ elif vista == "Sectores":
             "positivos (entra dinero y suben más que el resto) mientras otros pierden ambas cosas.")
 
         st.subheader("Gráfico de rotación relativa (RRG)")
-        st.plotly_chart(grafico_rrg(ratio, mom, fecha), width="stretch")
+        # ejes fijos para todo el rango del selector de período: así se comparan los movimientos
+        ventana_r = ratio.loc[fechas[0]:fechas[-1]].tail(len(fechas) + 6)
+        ventana_m = mom.loc[fechas[0]:fechas[-1]].tail(len(fechas) + 6)
+        lim_rrg = (max(abs(ventana_r.stack() - 100).max(), 0.5) * 1.1, max(abs(ventana_m.stack() - 100).max(), 0.5) * 1.1)
+        st.plotly_chart(grafico_rrg(ratio, mom, fecha, limites=lim_rrg), width="stretch")
         ventana, rezago = sectores.RRG[frec]
         st.caption(
             f"Eje X: **RS-Ratio** = fuerza relativa del sector contra el mercado (sobre 100 = le gana a su "
@@ -1513,7 +1521,9 @@ elif vista == "Sectores":
                            + ([] if fuente == FUENTE_ETF else ["Amplitud (% al alza)"]), horizontal=True)
         clave = {"Retorno vs mercado (pp)": "rel", "Δ participación de volumen (pp)": "d_part",
                  "Amplitud (% al alza)": "alza"}[metrica]
-        st.plotly_chart(grafico_calor(s[clave], fecha, frec, clave), width="stretch")
+        centro_c = 50 if clave == "alza" else 0
+        lim_c = (s[clave].loc[:fechas[-1]].tail(len(fechas) + N_CALOR) - centro_c).abs().quantile(0.95).max()
+        st.plotly_chart(grafico_calor(s[clave], fecha, frec, clave, lim=lim_c if pd.notna(lim_c) else None), width="stretch")
         st.caption(f"Últimos {N_CALOR} períodos hasta el elegido. Verde = el sector le ganó al mercado / ganó "
                    "participación de volumen / subió la mayoría de sus empresas; rojo = lo contrario.")
 
