@@ -25,6 +25,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main                 # siempre la versión más reciente (no la del momento en que se pidió la corrida)
 
       - uses: actions/setup-python@v5
         with:
@@ -45,5 +47,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/precios data/_ultima_actualizacion.json
           git commit -m "Precios $(TZ=America/New_York date '+%Y-%m-%d %H:%M NY')"
-          for i in 1 2 3; do git pull --rebase origin main && git push && exit 0; sleep 15; done
+          # si otra corrida publicó entre medio, se reaplica encima; en un conflicto ganan estos precios (son los más recientes)
+          for i in 1 2 3; do git pull --rebase -X theirs origin main && git push && exit 0; git rebase --abort 2>/dev/null; sleep 15; done
           exit 1
