@@ -1564,6 +1564,50 @@ elif vista == "Sectores":
                        f"1° = el que más subió. **Cambio** = cuántos puestos subió (↑) o bajó (↓) frente al mismo tramo "
                        f"{ {'Mes': 'del mes', 'Semana': 'de la semana', 'Día': 'de la rueda'}[per] } anterior.")
 
+            tramo_txt = "cada rueda" if per == "Día" else f"las primeras {k} ruedas de cada período"
+            st.subheader("Precio: retorno en el mismo tramo")
+            rt = tr["ret"]
+            prom = tr["ret_mercado"]
+            tabla_p = rt[et[::-1]].copy()
+            tabla_p["vs promedio (pp)"] = rt[et[0]] - prom[et[0]]
+            tabla_p = tabla_p.sort_values(et[0], ascending=False)
+            tabla_p.loc["Promedio del universo" if fuente != FUENTE_ETF else "Promedio de los ETF"] = list(prom[et[::-1]]) + [np.nan]
+            tabla_p = tabla_p.rename_axis("Sector").reset_index()
+            st.dataframe(
+                tabla_p.style.map(colorear_num, subset=et + ["vs promedio (pp)"])
+                       .apply(lambda f: ["font-weight: 600; border-top: 1px solid #8a8984" if f["Sector"].startswith("Promedio") else ""] * len(f), axis=1),
+                hide_index=True, width="stretch",
+                column_config={"vs promedio (pp)": st.column_config.NumberColumn(format="%+.2f"),
+                               **{e: st.column_config.NumberColumn(e, format="%+.2f%%") for e in et}})
+            st.caption(f"Retorno de cada sector (pesos iguales entre sus empresas) en {tramo_txt}. **vs promedio** = "
+                       f"retorno del sector en {et[0]} menos el promedio de todas las empresas en ese mismo tramo. "
+                       "La última fila es ese promedio.")
+
+            if fuente != FUENTE_ETF:
+                st.subheader("Amplitud: % de empresas que suben más que el promedio")
+                sb = tr["sobre"]
+                tabla_b = sb[et[::-1]].copy()
+                tabla_b["Cambio (pp)"] = sb[et[0]] - sb[et[1]]
+                tabla_b = tabla_b.sort_values(et[0], ascending=False).rename_axis("Sector").reset_index()
+
+                def color_amplitud(v):
+                    if pd.isna(v):
+                        return ""
+                    x = min(abs(v - 50) / 30, 1)
+                    return f"background-color: rgba({'62,207,142' if v > 50 else '239,90,111'},{0.5 * x:.2f})"
+                st.dataframe(
+                    tabla_b.style.map(color_amplitud, subset=et).map(colorear_num, subset=["Cambio (pp)"]),
+                    hide_index=True, width="stretch",
+                    column_config={"Cambio (pp)": st.column_config.NumberColumn(format="%+.0f"),
+                                   **{e: st.column_config.NumberColumn(e, format="%.0f%%") for e in et}})
+                st.caption(f"Qué parte de las empresas de cada sector tuvo un retorno **mayor que el promedio de todas las empresas** "
+                           f"en {tramo_txt}. Sobre 50% (verde) = la mayoría del sector le gana al promedio: la subida es amplia y "
+                           "no depende de unas pocas acciones. Bajo 50% (rojo) = la mayoría queda atrás. **Cambio** = "
+                           f"{et[0]} menos {et[1]}.")
+            else:
+                st.caption("La amplitud (% de empresas que suben más que el promedio) no existe para un ETF: cambia la fuente a "
+                           "**Universo** para verla.")
+
             st.subheader("Volumen: participación y flujo en el mismo tramo")
             pa = tr["part"]
             delta = pa[et[0]] - pa[et[1]]
