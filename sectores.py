@@ -176,6 +176,7 @@ def tramos(cierre, dolares, sector_de, periodo, n, min_empresas=MIN_EMPRESAS):
     (el más reciente primero): ret (%), rank (1 = mejor retorno), part (% del volumen en dólares),
     sobre (% de las empresas del sector que subieron más que el promedio del universo; vacío si el
     sector tiene una sola serie, como un ETF), ret_mercado (retorno promedio del universo por período),
+    dolares (volumen en dólares del sector en el tramo),
     más k (ruedas del tramo) y etiquetas de cada período."""
     sector_de = pd.Series(sector_de).reindex(cierre.columns)
     conteo = sector_de.value_counts()
@@ -191,7 +192,7 @@ def tramos(cierre, dolares, sector_de, periodo, n, min_empresas=MIN_EMPRESAS):
         clave = pd.Series(idx.to_period("M" if periodo == "Mes" else "W-FRI"), index=idx)
     grupos = list(dict.fromkeys(clave))[-(n + 1):][::-1]          # en curso primero
     k = int((clave == grupos[0]).sum())
-    R, P, B, M, etiquetas = {}, {}, {}, {}, []
+    R, P, B, M, V, etiquetas = {}, {}, {}, {}, {}, []
     una_serie = sector_de.value_counts().max() <= 1
     for g in grupos:
         dias = clave.index[clave == g][:k]
@@ -206,6 +207,7 @@ def tramos(cierre, dolares, sector_de, periodo, n, min_empresas=MIN_EMPRESAS):
         R[et] = ((1 + ret_sec.loc[dias]).prod() - 1) * 100
         tot = dv_sec.loc[dias].sum()
         P[et] = tot / tot.sum() * 100
+        V[et] = tot
         # retorno de cada empresa en el tramo vs el promedio de todas (pesos iguales)
         r_emp = ((1 + ret.loc[dias]).prod(min_count=1) - 1) * 100
         M[et] = r_emp.mean()
@@ -215,7 +217,7 @@ def tramos(cierre, dolares, sector_de, periodo, n, min_empresas=MIN_EMPRESAS):
     if una_serie:
         B[:] = float("nan")
     rank = R.rank(ascending=False, method="min").astype(int)
-    return {"ret": R, "rank": rank, "part": P, "sobre": B, "ret_mercado": pd.Series(M), "k": k, "etiquetas": etiquetas}
+    return {"ret": R, "rank": rank, "part": P, "sobre": B, "ret_mercado": pd.Series(M), "dolares": pd.DataFrame(V), "k": k, "etiquetas": etiquetas}
 
 
 # ---------------------------------------------------------------------------

@@ -1589,24 +1589,28 @@ elif vista == "Sectores":
 
             st.subheader("Resumen: precio, amplitud y volumen")
             con_amp = fuente != FUENTE_ETF
-            ver = st.selectbox("Período", et[:-1], index=0, key=f"tramo_resumen_{per}",
-                               help="Período que se lee; se compara con el anterior (mismo tramo).")
+            ver = st.select_slider("Período", options=et[:-1][::-1], value=et[0], key=f"tramo_resumen_{per}_{n_per}",
+                                   help="Período que se lee (a la derecha, el más reciente); se compara con el anterior (mismo tramo).")
             i_v = et.index(ver); ant = et[i_v + 1]
-            rt_, pa_, sb_, pm_ = tr["ret"], tr["part"], tr["sobre"], tr["ret_mercado"]
+            rt_, pa_, sb_, pm_, dv_ = tr["ret"], tr["part"], tr["sobre"], tr["ret_mercado"], tr["dolares"]
+            otros = [e for e in et if e != ver]                 # el resto de los períodos de la ventana
             res = pd.DataFrame({
                 "Retorno %": rt_[ver],
                 "vs promedio (pp)": rt_[ver] - pm_[ver],
+                "Retorno vs su promedio (pp)": rt_[ver] - rt_[otros].mean(axis=1),
                 "Amplitud %": sb_[ver],
                 "Δ amplitud (pp)": sb_[ver] - sb_[ant],
                 "Part. volumen %": pa_[ver],
                 "Volumen vs anterior %": (pa_[ver] / pa_[ant] - 1) * 100,
+                "Volumen vs su promedio %": (dv_[ver] / dv_[otros].mean(axis=1) - 1) * 100,
             })
             res["Lectura"] = [lectura_sector(a, b, c) for a, b, c in zip(res["vs promedio (pp)"], res["Volumen vs anterior %"],
                                                                          res["Amplitud %"])]
             if not con_amp:
                 res = res.drop(columns=["Amplitud %", "Δ amplitud (pp)"])
             res = res.sort_values("vs promedio (pp)", ascending=False).rename_axis("Sector").reset_index()
-            num = [c_ for c_ in ("Retorno %", "vs promedio (pp)", "Δ amplitud (pp)", "Volumen vs anterior %") if c_ in res.columns]
+            num = [c_ for c_ in ("Retorno %", "vs promedio (pp)", "Retorno vs su promedio (pp)", "Δ amplitud (pp)", "Volumen vs anterior %",
+                                    "Volumen vs su promedio %") if c_ in res.columns]
             sty = res.style.map(colorear_num, subset=num)
             if con_amp:
                 sty = sty.map(color_amplitud, subset=["Amplitud %"])
@@ -1614,15 +1618,22 @@ elif vista == "Sectores":
                 sty, hide_index=True, width="stretch",
                 column_config={"Retorno %": st.column_config.NumberColumn(format="%+.2f%%"),
                                "vs promedio (pp)": st.column_config.NumberColumn(format="%+.2f"),
+                               "Retorno vs su promedio (pp)": st.column_config.NumberColumn(
+                                   format="%+.2f", help="Retorno del sector en este período menos su propio retorno promedio en el mismo "
+                                   "tramo de los demás períodos de la ventana."),
                                "Amplitud %": st.column_config.NumberColumn(format="%.0f%%"),
                                "Δ amplitud (pp)": st.column_config.NumberColumn(format="%+.0f"),
                                "Part. volumen %": st.column_config.NumberColumn(format="%.1f%%"),
                                "Volumen vs anterior %": st.column_config.NumberColumn(
                                    format="%+.0f%%", help="Cambio de la participación de volumen del sector frente al período anterior "
                                    f"(en % de su propio nivel). Entre −{UMBRAL_VOL_ESTABLE}% y +{UMBRAL_VOL_ESTABLE}% se lee como estable."),
+                               "Volumen vs su promedio %": st.column_config.NumberColumn(
+                                   format="%+.0f%%", help="Volumen en dólares del sector en este período frente a su propio volumen "
+                                   "promedio en el mismo tramo de los demás períodos de la ventana."),
                                "Lectura": st.column_config.TextColumn(width="large")})
             st.caption(f"**{ver}** comparado con **{ant}**{'' if per == 'Día' else ' (mismo tramo)'}. **Precio**: retorno del sector y "
-                       "cuánto le gana al promedio. "
+                       "cuánto le gana al promedio. **Contra sí mismo**: retorno y volumen en dólares del sector frente a su propio "
+                       f"promedio en los otros {len(otros)} períodos de la ventana (se ajusta con **Períodos anteriores**). "
                        + ("**Amplitud**: % de sus empresas que suben más que el promedio. " if con_amp else "")
                        + "**Volumen**: parte del volumen en dólares que se transó en el sector y cuánto cambió esa parte frente al período "
                        f"anterior (±{UMBRAL_VOL_ESTABLE}% = estable). "
