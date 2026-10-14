@@ -874,6 +874,45 @@ def colorear_num(v):
     return ""
 
 
+def color_amplitud(v):
+    """Fondo verde sobre 50% y rojo bajo 50%, más intenso cuanto más lejos de la mitad."""
+    if pd.isna(v):
+        return ""
+    x = min(abs(v - 50) / 30, 1)
+    return f"background-color: rgba({'62,207,142' if v > 50 else '239,90,111'},{0.5 * x:.2f})"
+
+
+UMBRAL_VOL_ESTABLE = 5   # % de cambio en la participación de volumen bajo el cual se considera estable
+
+
+def lectura_sector(precio, vol, amp):
+    """Lectura en palabras de un sector: precio (vs promedio, pp), volumen (cambio % de su participación)
+    y amplitud (% de empresas sobre el promedio; NaN para un ETF)."""
+    if pd.isna(precio) or pd.isna(vol):
+        return "Sin datos"
+    sube = precio > 0                                   # le gana al promedio del universo
+    v = "estable" if abs(vol) < UMBRAL_VOL_ESTABLE else ("entra" if vol > 0 else "sale")
+    if pd.isna(amp):
+        p_txt = "le gana al promedio" if sube else "queda bajo el promedio"
+    else:
+        amplia = amp >= 50
+        p_txt = ({True: "la mayoría le gana al promedio", False: "le gana al promedio por pocas acciones"} if sube
+                 else {True: "queda bajo el promedio por pocas acciones", False: "la mayoría queda bajo el promedio"})[amplia]
+    if v == "estable":
+        cabeza = "⚪ Volumen normal"
+    elif v == "entra":
+        if pd.isna(amp):
+            cabeza = "🟢 Compra" if sube else "🔴 Presión vendedora"
+        elif sube:
+            cabeza = "🟢 Compra amplia" if amplia else "🟢 Compra concentrada"
+        else:
+            cabeza = "🔴 Venta concentrada" if amplia else "🔴 Presión vendedora amplia"
+    else:
+        cabeza = "🟡 Gana sin volumen" if sube else "🟠 Pierde sin volumen (desinterés)"
+    vol_txt = {"entra": "entra volumen", "sale": "sale volumen", "estable": "volumen estable"}[v]
+    return f"{cabeza}: {vol_txt} y {p_txt}"
+
+
 def grafico_rrg(ratio, mom, fecha, cola=6, limites=None):
     """Gráfico de rotación relativa: cada sector con su cola de los últimos períodos.
     `limites` = (dx, dy) fijos alrededor de 100, para que los ejes no cambien al mover el período."""
@@ -1548,6 +1587,52 @@ elif vista == "Sectores":
                            f"Las columnas van de la más antigua (izquierda) a la más reciente (derecha); la última ({et[0]}) es el período en curso; su última rueda puede estar incompleta si la "
                            "sesión sigue abierta.")
 
+            st.subheader("Resumen: precio, amplitud y volumen")
+            con_amp = fuente != FUENTE_ETF
+            ver = st.selectbox("Período", et[:-1], index=0, key=f"tramo_resumen_{per}",
+                               help="Período que se lee; se compara con el anterior (mismo tramo).")
+            i_v = et.index(ver); ant = et[i_v + 1]
+            rt_, pa_, sb_, pm_ = tr["ret"], tr["part"], tr["sobre"], tr["ret_mercado"]
+            res = pd.DataFrame({
+                "Retorno %": rt_[ver],
+                "vs promedio (pp)": rt_[ver] - pm_[ver],
+                "Amplitud %": sb_[ver],
+                "Δ amplitud (pp)": sb_[ver] - sb_[ant],
+                "Part. volumen %": pa_[ver],
+                "Volumen vs anterior %": (pa_[ver] / pa_[ant] - 1) * 100,
+            })
+            res["Lectura"] = [lectura_sector(a, b, c) for a, b, c in zip(res["vs promedio (pp)"], res["Volumen vs anterior %"],
+                                                                         res["Amplitud %"])]
+            if not con_amp:
+                res = res.drop(columns=["Amplitud %", "Δ amplitud (pp)"])
+            res = res.sort_values("vs promedio (pp)", ascending=False).rename_axis("Sector").reset_index()
+            num = [c_ for c_ in ("Retorno %", "vs promedio (pp)", "Δ amplitud (pp)", "Volumen vs anterior %") if c_ in res.columns]
+            sty = res.style.map(colorear_num, subset=num)
+            if con_amp:
+                sty = sty.map(color_amplitud, subset=["Amplitud %"])
+            st.dataframe(
+                sty, hide_index=True, width="stretch",
+                column_config={"Retorno %": st.column_config.NumberColumn(format="%+.2f%%"),
+                               "vs promedio (pp)": st.column_config.NumberColumn(format="%+.2f"),
+                               "Amplitud %": st.column_config.NumberColumn(format="%.0f%%"),
+                               "Δ amplitud (pp)": st.column_config.NumberColumn(format="%+.0f"),
+                               "Part. volumen %": st.column_config.NumberColumn(format="%.1f%%"),
+                               "Volumen vs anterior %": st.column_config.NumberColumn(
+                                   format="%+.0f%%", help="Cambio de la participación de volumen del sector frente al período anterior "
+                                   f"(en % de su propio nivel). Entre −{UMBRAL_VOL_ESTABLE}% y +{UMBRAL_VOL_ESTABLE}% se lee como estable."),
+                               "Lectura": st.column_config.TextColumn(width="large")})
+            st.caption(f"**{ver}** comparado con **{ant}**{'' if per == 'Día' else ' (mismo tramo)'}. **Precio**: retorno del sector y "
+                       "cuánto le gana al promedio. "
+                       + ("**Amplitud**: % de sus empresas que suben más que el promedio. " if con_amp else "")
+                       + "**Volumen**: parte del volumen en dólares que se transó en el sector y cuánto cambió esa parte frente al período "
+                       f"anterior (±{UMBRAL_VOL_ESTABLE}% = estable). "
+                       "**Lectura**: precio vs promedio (le gana / queda bajo) × volumen (entra / sale / estable)"
+                       + (" × amplitud (mayoría / minoría de las empresas)" if con_amp else "") + ". "
+                       "Más volumen con el sector quedando bajo el promedio indica que los vendedores están siendo más agresivos que los "
+                       "compradores (presión vendedora), y al revés si le gana. Se mide contra el promedio porque la rotación es "
+                       "relativa: un sector puede bajar menos que el resto y aun así estar ganando. Describe lo que pasó; en el historial, "
+                       "el volumen por sí solo no anticipó el rendimiento siguiente.")
+
             st.subheader("Ranking de los sectores en el mismo tramo")
             rk = tr["rank"]
             cambio = rk[et[1]] - rk[et[0]]
@@ -1589,12 +1674,6 @@ elif vista == "Sectores":
                 tabla_b = sb[et[::-1]].copy()
                 tabla_b["Cambio (pp)"] = sb[et[0]] - sb[et[1]]
                 tabla_b = tabla_b.sort_values(et[0], ascending=False).rename_axis("Sector").reset_index()
-
-                def color_amplitud(v):
-                    if pd.isna(v):
-                        return ""
-                    x = min(abs(v - 50) / 30, 1)
-                    return f"background-color: rgba({'62,207,142' if v > 50 else '239,90,111'},{0.5 * x:.2f})"
                 st.dataframe(
                     tabla_b.style.map(color_amplitud, subset=et).map(colorear_num, subset=["Cambio (pp)"]),
                     hide_index=True, width="stretch",
