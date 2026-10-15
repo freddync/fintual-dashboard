@@ -6,6 +6,7 @@ y los deja en una sola carpeta: data/.
 
     python actualizar.py precios          (~10-15 min)
     python actualizar.py fundamentales    (~20-30 min, cada trimestre basta)
+    python actualizar.py opciones         (~45 min, put/call de cada empresa; una vez al día)
     python actualizar.py todo
 
 La lista de empresas vive en data/company_info.json.
@@ -29,6 +30,7 @@ PRECIOS_DIR = os.path.join(DATA_DIR, "precios")
 FUND_DIR = os.path.join(DATA_DIR, "fundamentales")
 COMPANY_INFO = os.path.join(DATA_DIR, "company_info.json")
 SELLO = os.path.join(DATA_DIR, "_ultima_actualizacion.json")
+PUT_CALL = os.path.join(DATA_DIR, "put_call.csv")
 
 N_ROWS_KEEP = 1250   # ~5 años de sesiones diarias
 PAUSA = 0.4          # segundos entre peticiones, para no gatillar el rate-limit de Yahoo
@@ -213,6 +215,62 @@ def actualizar_fundamentales():
     actualizar_sello(fundamentales=datetime.date.today().isoformat())
 
 
+# ---------------------------------------------------------------------------
+# Opciones: put/call de cada empresa (Open Interest y volumen, vencimientos a 60 días o menos)
+# ---------------------------------------------------------------------------
+
+def actualizar_opciones():
+    """data/put_call.csv con una fila por empresa. Fuente: Cboe (el mismo cálculo que la vista Empresa).
+    El Open Interest cambia una vez al día (la OCC lo publica de noche), así que basta una corrida diaria."""
+    import opciones
+    lista = tickers()
+    print(f"=== Opciones (put/call): {len(lista)} empresas ===", flush=True)
+    filas = []
+
+    def bajar(t):
+        # Cboe responde 403 tanto si el ticker no tiene opciones como si está limitando las
+        # peticiones: se reintenta con pausas crecientes, y los que fallan van a una segunda pasada
+        for intento in range(3):
+            try:
+                pc = opciones.put_call(opciones.cadena_cboe(t))
+                time.sleep(PAUSA)
+                return t, pc
+            except requests.HTTPError as e:
+                if e.response is not None and e.response.status_code == 404:
+                    return t, None
+            except Exception:
+                pass
+            time.sleep(5 * 2 ** intento)
+        return t, None
+
+    pendientes = lista
+    for pasada in (1, 2, 3):
+        fallidos = []
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            for i, (t, pc) in enumerate(ex.map(bajar, pendientes), 1):
+                if pc is None:
+                    fallidos.append(t)
+                else:
+                    filas.append({"Ticker": t, "Put/Call OI": pc["pc_oi"], "OI put": pc["oi_put"], "OI call": pc["oi_call"],
+                                  "Put/Call volumen": pc["pc_vol"], "Vol put": pc["vol_put"], "Vol call": pc["vol_call"]})
+                if i % 100 == 0 or i == len(pendientes):
+                    print(f"  pasada {pasada} [{i}/{len(pendientes)}] ok={len(filas)} sin datos={len(fallidos)}", flush=True)
+        if not fallidos or pasada == 3:
+            break
+        time.sleep(60)
+        pendientes = fallidos
+    if len(filas) < 0.5 * len(lista):
+        sys.exit(f"ERROR: solo {len(filas)} de {len(lista)} empresas con datos; se conserva el archivo anterior.")
+    df = pd.DataFrame(filas).sort_values("Ticker")
+    for c in ("Put/Call OI", "Put/Call volumen"):
+        df[c] = df[c].round(3)
+    df.to_csv(PUT_CALL, index=False, lineterminator="\n")
+    if fallidos:
+        print("Sin datos:", ", ".join(fallidos))
+    ahora = datetime.datetime.now(ZoneInfo("America/New_York"))
+    actualizar_sello(opciones=ahora.strftime("%Y-%m-%d %H:%M NY"))
+
+
 if __name__ == "__main__":
     que = sys.argv[1] if len(sys.argv) > 1 else "precios"
     t0 = time.time()
@@ -220,4 +278,6 @@ if __name__ == "__main__":
         actualizar_precios()
     if que in ("fundamentales", "todo"):
         actualizar_fundamentales()
+    if que in ("opciones", "todo"):
+        actualizar_opciones()
     print(f"\nListo en {(time.time() - t0) / 60:.1f} min.")

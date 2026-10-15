@@ -329,9 +329,19 @@ def multiplos(ticker, precio):
     return out
 
 
+@st.cache_data(show_spinner=False)
+def cargar_put_call(_sello_key):
+    """Put/call OI de cada empresa (descarga diaria de Cboe, vencimientos a 60 días o menos)."""
+    path = os.path.join(DATA_DIR, "put_call.csv")
+    if not os.path.exists(path):
+        return {}
+    return pd.read_csv(path).set_index("Ticker")["Put/Call OI"].to_dict()
+
+
 @st.cache_data(show_spinner="Calculando resumen de todas las empresas...")
 def resumen(_sello_key):
     info = cargar_info()
+    pc = cargar_put_call(_sello_key)
     filas = []
     for t, i in info.items():
         df = cargar_precios(t)
@@ -348,6 +358,7 @@ def resumen(_sello_key):
         for col, n in RETORNOS.items():
             fila[col] = (precio / close.iloc[-n - 1] - 1) * 100 if len(close) > n else None
         fila.update(multiplos(t, precio))
+        fila["Put/Call OI"] = pc.get(t)
         filas.append(fila)
     return pd.DataFrame(filas).sort_values("Ticker").reset_index(drop=True)
 
@@ -526,6 +537,9 @@ COLUMNAS = {
     "Marg. neto %": st.column_config.NumberColumn(format="%.1f%%"),
     "P/E": st.column_config.NumberColumn(format="%.1fx"),
     "EV/EBITDA": st.column_config.NumberColumn(format="%.1fx"),
+    "Put/Call OI": st.column_config.NumberColumn(
+        format="%.2f", help="Contratos abiertos de puts ÷ calls, vencimientos a 60 días o menos (Cboe, una vez al día). "
+        "Sobre 1 = más puts que calls."),
     # pestaña Señales
     "Fecha señal": st.column_config.DateColumn(format="DD-MM-YYYY"),
     "Compra": st.column_config.DateColumn(format="DD-MM-YYYY"),
@@ -582,10 +596,15 @@ def ordenar(tabla, key):
     return tabla.sort_values(col, ascending=asc, na_position="last", kind="mergesort", key=clave)
 
 
+# se calculan (la vista Empresa usa algunas) pero no se muestran en las tablas
+OCULTAS_TABLA = ["MACD hist %", "EV/EBITDA", "Crec. ingresos %", "Marg. neto %"]
+
+
 def mostrar_tabla(tabla, key, pestana, height=650, colorear=None):
     """Tabla ordenable; al marcar la casilla de una fila se abre esa empresa.
     La vista y la `pestana` (índice dentro de General) quedan anotadas para que el
     botón de volver regrese a ellas. `colorear` = columnas en verde/rojo según su signo."""
+    tabla = tabla.drop(columns=OCULTAS_TABLA, errors="ignore")
     tabla = ordenar(tabla, key).reset_index(drop=True)
     datos = tabla.style.map(colorear_num, subset=colorear) if colorear else tabla
     sel = st.dataframe(datos, hide_index=True, width="stretch", height=height,
@@ -1090,8 +1109,9 @@ if vista == "General":
 
     with tab_todas:
         mostrar_tabla(con_estado_sector(filtrado, tuple(sorted(sel_uni))), "tabla_general", 0)
-        st.caption("P/E con EPS diluido de los últimos 4 trimestres. EV/EBITDA con el último año fiscal. "
-                   "Crecimiento y margen del último año fiscal.")
+        st.caption("P/E con EPS diluido de los últimos 4 trimestres. **Put/Call OI** = contratos abiertos de puts ÷ calls "
+                   f"de los vencimientos a 60 días o menos (Cboe; actualizado {sello.get('opciones', '—') if sello else '—'}); "
+                   "sobre 1 hay más puts que calls.")
 
     with tab_rsi:
         if sobreventa.empty:
