@@ -2,8 +2,11 @@
 opciones.py
 -----------
 Call/put walls (los strikes con mayor Open Interest) de los vencimientos más
-próximos, y velas de 1 hora de la última semana. Se descarga en vivo desde
-Yahoo (yfinance resuelve la cookie/crumb que exigen las opciones).
+próximos, put/call ratio, y velas de 1 hora de la última semana.
+
+La cadena de opciones viene de Cboe (cotizaciones diferidas, una sola descarga con
+todos los vencimientos). Yahoo queda de respaldo: de noche y de madrugada deja el
+Open Interest en cero en casi todos los strikes, y los muros salían vacíos o mal.
 """
 
 import datetime
@@ -16,40 +19,103 @@ import requests
 N_VENCIMIENTOS = 2   # los 2 vencimientos más próximos
 N_MUROS = 2          # muros por lado
 VENTANA = 0.25       # strikes a ±25% del precio
+DIAS_PUT_CALL = 60   # put/call "total": vencimientos a 60 días o menos (ahí está casi todo el volumen)
+MIN_OI_VALIDO = 0.3  # si menos del 30% de los strikes con volumen trae OI, el OI de la fuente viene vacío
+CBOE = "https://cdn.cboe.com/api/global/delayed_quotes/options/{}.json"
 
 HEADERS = {"User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                           "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")}
 
 
-def _top_oi(df, precio):
-    """Los N_MUROS strikes con mayor OI dentro de la ventana, como [(strike, oi), ...]."""
-    if df is None or df.empty:
-        return []
-    d = df[["strike", "openInterest"]].apply(pd.to_numeric, errors="coerce").fillna(0)
-    d = d[(d["strike"] >= precio * (1 - VENTANA)) & (d["strike"] <= precio * (1 + VENTANA))
-          & (d["openInterest"] > 0)]
-    top = d.sort_values("openInterest", ascending=False).head(N_MUROS)
-    return [(float(k), int(oi)) for k, oi in zip(top["strike"], top["openInterest"])]
+def _hoy():
+    return datetime.datetime.now(ZoneInfo("America/New_York")).date()   # el servidor corre en UTC
 
 
-def muros(ticker, precio):
-    """[{exp, dte, calls: [(strike, oi)], puts: [(strike, oi)]}, ...]"""
+def cadena_cboe(ticker):
+    """Todos los contratos del ticker: DataFrame exp (date), tipo (C/P), strike, oi, vol."""
+    r = requests.get(CBOE.format(ticker.replace("-", ".")), headers=HEADERS, timeout=20)
+    r.raise_for_status()
+    o = pd.DataFrame(r.json()["data"]["options"])
+    m = o["option"].str.extract(r"^(?P<raiz>.+?)(?P<exp>\d{6})(?P<tipo>[CP])(?P<k>\d{8})$")
+    # solo la raíz estándar: las ajustadas (NVDA1, tras un split o fusión) no entregan 100 acciones
+    m = m[m["raiz"] == m["raiz"].value_counts().idxmax()]
+    o = o.loc[m.index]
+    return pd.DataFrame({"exp": pd.to_datetime(m["exp"], format="%y%m%d").dt.date, "tipo": m["tipo"],
+                         "strike": m["k"].astype(float) / 1000,
+                         "oi": pd.to_numeric(o["open_interest"], errors="coerce").fillna(0),
+                         "vol": pd.to_numeric(o["volume"], errors="coerce").fillna(0)})
+
+
+def cadena_yahoo(ticker):
+    """Respaldo: lo mismo desde Yahoo, solo los vencimientos a DIAS_PUT_CALL días o menos."""
     import yfinance as yf
 
-    t = yf.Ticker(ticker)
-    hoy = datetime.datetime.now(ZoneInfo("America/New_York")).date()   # el servidor corre en UTC
-    out = []
+    t, hoy, partes = yf.Ticker(ticker), _hoy(), []
     for exp in t.options or []:
         dte = (datetime.date.fromisoformat(exp) - hoy).days
         if dte < 0:
             continue
-        cadena = t.option_chain(exp)
-        calls, puts = _top_oi(cadena.calls, precio), _top_oi(cadena.puts, precio)
+        if dte > DIAS_PUT_CALL and partes:
+            break
+        c = t.option_chain(exp)
+        for tipo, df in (("C", c.calls), ("P", c.puts)):
+            partes.append(pd.DataFrame({"exp": datetime.date.fromisoformat(exp), "tipo": tipo, "strike": df["strike"],
+                                        "oi": pd.to_numeric(df["openInterest"], errors="coerce").fillna(0),
+                                        "vol": pd.to_numeric(df["volume"], errors="coerce").fillna(0)}))
+    return pd.concat(partes, ignore_index=True) if partes else pd.DataFrame(columns=["exp", "tipo", "strike", "oi", "vol"])
+
+
+def cadena(ticker):
+    """(contratos, fuente). Cboe primero; Yahoo si Cboe falla o no tiene el ticker."""
+    try:
+        df = cadena_cboe(ticker)
+        if not df.empty:
+            return df, "Cboe"
+    except Exception:
+        pass
+    return cadena_yahoo(ticker), "Yahoo"
+
+
+def oi_valido(df):
+    """¿La fuente trae Open Interest? (Yahoo lo deja en cero de madrugada)."""
+    d = df[df["vol"] > 0]
+    return d.empty or (d["oi"] > 0).mean() >= MIN_OI_VALIDO
+
+
+def _top(df, precio, col):
+    """Los N_MUROS strikes con mayor `col` dentro de la ventana, como [(strike, valor), ...]."""
+    d = df[(df["strike"] >= precio * (1 - VENTANA)) & (df["strike"] <= precio * (1 + VENTANA)) & (df[col] > 0)]
+    top = d.sort_values(col, ascending=False).head(N_MUROS)
+    return [(float(k), int(v)) for k, v in zip(top["strike"], top[col])]
+
+
+def conteos(df):
+    """Contratos de calls y puts (OI y volumen) y sus put/call ratios."""
+    c, p = df[df["tipo"] == "C"], df[df["tipo"] == "P"]
+    out = {"oi_call": int(c["oi"].sum()), "oi_put": int(p["oi"].sum()),
+           "vol_call": int(c["vol"].sum()), "vol_put": int(p["vol"].sum())}
+    out["pc_oi"] = out["oi_put"] / out["oi_call"] if out["oi_call"] else None
+    out["pc_vol"] = out["vol_put"] / out["vol_call"] if out["vol_call"] else None
+    return out
+
+
+def muros(df, precio, base="oi"):
+    """[{exp, dte, calls: [(strike, oi)], puts: [(strike, oi)], oi_call, ..., pc_vol}, ...]
+    de los N_VENCIMIENTOS más próximos. `base` = "vol" arma los muros con el volumen."""
+    hoy, out = _hoy(), []
+    for exp, g in sorted(df[df["exp"] >= hoy].groupby("exp"), key=lambda x: x[0]):
+        calls, puts = _top(g[g["tipo"] == "C"], precio, base), _top(g[g["tipo"] == "P"], precio, base)
         if calls or puts:
-            out.append({"exp": exp, "dte": dte, "calls": calls, "puts": puts})
+            out.append({"exp": exp.isoformat(), "dte": (exp - hoy).days, "calls": calls, "puts": puts, **conteos(g)})
         if len(out) == N_VENCIMIENTOS:
             break
     return out
+
+
+def put_call(df, dias=DIAS_PUT_CALL):
+    """Put/call de todos los vencimientos a `dias` días o menos."""
+    hoy = _hoy()
+    return conteos(df[(df["exp"] >= hoy) & (df["exp"] <= hoy + datetime.timedelta(days=dias))])
 
 
 def noticias(ticker, n=10):

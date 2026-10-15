@@ -396,9 +396,15 @@ def tabla_fundamental(df, anual):
 
 @st.cache_data(ttl=900, show_spinner="Descargando opciones...")
 def cargar_muros(ticker, precio, version=""):
-    """(muros, error). Cacheado 15 min: las opciones cambian durante el día."""
+    """({vencimientos, total, fuente, base}, error). Cacheado 15 min: las opciones cambian durante el día."""
     try:
-        return opciones.muros(ticker, precio), None
+        df, fuente = opciones.cadena(ticker)
+        if df.empty:
+            return None, None
+        # si la fuente no trae Open Interest (Yahoo de madrugada), los muros se arman con el volumen
+        base = "oi" if opciones.oi_valido(df) else "vol"
+        return {"vencimientos": opciones.muros(df, precio, base), "total": opciones.put_call(df),
+                "fuente": fuente, "base": base}, None
     except Exception as e:
         return None, f"{type(e).__name__}: {e}"
 
@@ -445,7 +451,7 @@ def lista_muros(venc):
             for i, (k, oi) in enumerate(venc[nombre])] if venc else []
 
 
-def grafico_muros(velas, venc, estados):
+def grafico_muros(velas, venc, estados, etiqueta="OI"):
     """Velas de 1h de la semana con los walls extendidos hasta el vencimiento y,
     a la derecha, el perfil de volumen de la semana (mismo eje de precios)."""
     ahora = velas.index[-1]
@@ -488,7 +494,7 @@ def grafico_muros(velas, venc, estados):
                       opacity=0.07, line_width=0, row=1, col=1)
         fig.add_trace(go.Scatter(x=[velas.index[0], x_fin], y=[k, k], mode="lines",
                                  line=dict(color=color, width=1.5, dash="dot"),
-                                 hovertemplate=f"{tag} {k:,.2f} · OI {oi:,} · {est}<extra></extra>"),
+                                 hovertemplate=f"{tag} {k:,.2f} · {etiqueta} {oi:,} · {est}<extra></extra>"),
                       row=1, col=1)
         fig.add_hline(y=k, line=dict(color=color, width=1, dash="dot"), row=1, col=2)
         fig.add_annotation(x=x_fin, y=k, text=f"{tag} {k:,.2f} · {est}", showarrow=False,
@@ -1935,7 +1941,9 @@ else:
 
     # ---- call/put walls sobre las velas de 1h de la última semana ----
     st.subheader("Call / put walls")
-    paredes, err_op = cargar_muros(ticker, float(fila["Precio"]), VERSION_OPCIONES)
+    cad, err_op = cargar_muros(ticker, float(fila["Precio"]), VERSION_OPCIONES)
+    paredes = cad["vencimientos"] if cad else None
+    col_muro = "Open Interest" if not cad or cad["base"] == "oi" else "Volumen"
     velas, err_v = cargar_velas_1h(ticker, VERSION_OPCIONES)
     if err_op or not paredes:
         st.info(f"Sin cadena de opciones para {ticker}" + (f": {err_op}" if err_op else "."))
@@ -1946,12 +1954,36 @@ else:
         if paredes:
             etiquetas = [f"{p['exp']} ({p['dte']} DTE)" for p in paredes]
             venc = paredes[etiquetas.index(st.radio("Vencimiento", etiquetas, horizontal=True))]
+            tot = cad["total"]
+
+            def fmt_pc(x):
+                return "—" if x is None else f"{x:.2f}"
+            m = st.columns(4)
+            m[0].metric(f"Put/Call OI · {venc['exp']}", fmt_pc(venc["pc_oi"]),
+                        f"{venc['oi_put']:,} puts / {venc['oi_call']:,} calls", delta_color="off",
+                        help="Contratos abiertos (Open Interest) de puts dividido por los de calls, en este vencimiento.")
+            m[1].metric(f"Put/Call volumen · {venc['exp']}", fmt_pc(venc["pc_vol"]),
+                        f"{venc['vol_put']:,} puts / {venc['vol_call']:,} calls", delta_color="off",
+                        help="Contratos transados en la sesión: puts dividido por calls, en este vencimiento.")
+            m[2].metric(f"Put/Call OI · ≤{opciones.DIAS_PUT_CALL} días", fmt_pc(tot["pc_oi"]),
+                        f"{tot['oi_put']:,} puts / {tot['oi_call']:,} calls", delta_color="off",
+                        help=f"Todos los vencimientos de los próximos {opciones.DIAS_PUT_CALL} días.")
+            m[3].metric(f"Put/Call volumen · ≤{opciones.DIAS_PUT_CALL} días", fmt_pc(tot["pc_vol"]),
+                        f"{tot['vol_put']:,} puts / {tot['vol_call']:,} calls", delta_color="off",
+                        help=f"Todos los vencimientos de los próximos {opciones.DIAS_PUT_CALL} días.")
+            st.caption(
+                "**Put/Call** = contratos de puts ÷ contratos de calls (el call/put es su inverso). Sobre 1 hay más puts "
+                "que calls: más cobertura o apuestas a la baja; bajo 1, predominan los calls. En acciones lo habitual "
+                "es que esté bajo 1, así que conviene compararlo entre empresas y en el tiempo, más que contra 1. "
+                "**OI** = posiciones abiertas al cierre anterior (lo que construyen los muros); **volumen** = lo "
+                "transado en la última sesión (lo que se está apostando ahora).")
         estados = {tag: opciones.estado_muro(velas, k) for tag, k, _, _ in lista_muros(venc)}
-        st.plotly_chart(grafico_muros(velas, venc, estados), width="stretch", config=DIBUJO)
+        st.plotly_chart(grafico_muros(velas, venc, estados, "OI" if col_muro == "Open Interest" else "Vol."),
+                        width="stretch", config=DIBUJO)
         if venc:
             precio_act = float(velas["Close"].iloc[-1])
             tabla_m = pd.DataFrame([{
-                "Muro": tag, "Strike": k, "Open Interest": oi,
+                "Muro": tag, "Strike": k, col_muro: oi,
                 "Esta semana": estados[tag],
                 "Distancia %": (k / precio_act - 1) * 100,
                 "Vol. semana en zona %": opciones.volumen_en_zona(velas, k),
@@ -1961,12 +1993,12 @@ else:
                                   subset=["Esta semana"]),
                 hide_index=True, width="content", column_config={
                     "Strike": st.column_config.NumberColumn(format="%.2f"),
-                    "Open Interest": st.column_config.NumberColumn(format="%d"),
+                    col_muro: st.column_config.NumberColumn(format="%d"),
                     "Distancia %": PCT,
                     "Vol. semana en zona %": st.column_config.NumberColumn(format="%.1f%%")})
             z = opciones.ZONA * 100
             st.caption(
-                f"**CW** = call walls, **PW** = put walls: los 2 strikes con mayor Open Interest por lado, a "
+                f"**CW** = call walls, **PW** = put walls: los 2 strikes con mayor {col_muro} por lado, a "
                 f"±25% del precio. La franja de cada muro es su zona de contacto (±{z:g}% del strike). "
                 "Las líneas llegan hasta el cierre del día de vencimiento (límite DTE).")
             st.caption(
@@ -1975,9 +2007,12 @@ else:
                 "zona · **Rebotó** = llegó a la zona y se alejó sin cruzar · **Sin tocar** = no llegó. "
                 "A la derecha, el **perfil de volumen** de la semana (acciones transadas por nivel de "
                 "precio); en color, el volumen dentro de la zona de cada muro, y **POC** = el nivel con "
-                "más volumen. Los muros son el Open Interest de hoy: Yahoo no entrega el histórico, así "
-                "que no se sabe si el muro ya estaba ahí al empezar la semana. Datos en vivo de Yahoo, "
-                "cacheados 15 minutos.")
+                "más volumen. Los muros son el Open Interest de hoy: no hay histórico, así "
+                "que no se sabe si el muro ya estaba ahí al empezar la semana. "
+                f"Opciones de **{cad['fuente']}** (diferidas ~15 min), cacheadas 15 minutos.")
+            if cad["base"] == "vol":
+                st.warning("La fuente no trae Open Interest en este momento (Yahoo lo deja en cero de madrugada): los "
+                           "muros se armaron con el **volumen** transado de cada strike, y el Put/Call OI no está disponible.")
 
     # ---- fundamentales ----
     st.subheader("Fundamentales")
