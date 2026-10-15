@@ -1960,16 +1960,16 @@ else:
                 return "—" if x is None else f"{x:.2f}"
             m = st.columns(4)
             m[0].metric(f"Put/Call OI · {venc['exp']}", fmt_pc(venc["pc_oi"]),
-                        f"{venc['oi_put']:,} puts / {venc['oi_call']:,} calls", delta_color="off",
+                        f"{venc['oi_put']:,} puts / {venc['oi_call']:,} calls", delta_color="off", delta_arrow="off",
                         help="Contratos abiertos (Open Interest) de puts dividido por los de calls, en este vencimiento.")
             m[1].metric(f"Put/Call volumen · {venc['exp']}", fmt_pc(venc["pc_vol"]),
-                        f"{venc['vol_put']:,} puts / {venc['vol_call']:,} calls", delta_color="off",
+                        f"{venc['vol_put']:,} puts / {venc['vol_call']:,} calls", delta_color="off", delta_arrow="off",
                         help="Contratos transados en la sesión: puts dividido por calls, en este vencimiento.")
             m[2].metric(f"Put/Call OI · ≤{opciones.DIAS_PUT_CALL} días", fmt_pc(tot["pc_oi"]),
-                        f"{tot['oi_put']:,} puts / {tot['oi_call']:,} calls", delta_color="off",
+                        f"{tot['oi_put']:,} puts / {tot['oi_call']:,} calls", delta_color="off", delta_arrow="off",
                         help=f"Todos los vencimientos de los próximos {opciones.DIAS_PUT_CALL} días.")
             m[3].metric(f"Put/Call volumen · ≤{opciones.DIAS_PUT_CALL} días", fmt_pc(tot["pc_vol"]),
-                        f"{tot['vol_put']:,} puts / {tot['vol_call']:,} calls", delta_color="off",
+                        f"{tot['vol_put']:,} puts / {tot['vol_call']:,} calls", delta_color="off", delta_arrow="off",
                         help=f"Todos los vencimientos de los próximos {opciones.DIAS_PUT_CALL} días.")
             st.caption(
                 "**Put/Call** = contratos de puts ÷ contratos de calls (el call/put es su inverso). Sobre 1 hay más puts "
