@@ -232,7 +232,7 @@ def actualizar_opciones():
         # peticiones: se reintenta con pausas crecientes, y los que fallan van a una segunda pasada
         for intento in range(3):
             try:
-                pc = opciones.put_call(opciones.cadena_cboe(t))
+                pc = opciones.put_call_plazos(opciones.cadena_cboe(t))
                 time.sleep(PAUSA)
                 return t, pc
             except requests.HTTPError as e:
@@ -251,8 +251,7 @@ def actualizar_opciones():
                 if pc is None:
                     fallidos.append(t)
                 else:
-                    filas.append({"Ticker": t, "Put/Call OI": pc["pc_oi"], "OI put": pc["oi_put"], "OI call": pc["oi_call"],
-                                  "Put/Call volumen": pc["pc_vol"], "Vol put": pc["vol_put"], "Vol call": pc["vol_call"]})
+                    filas.append({"Ticker": t, **pc})
                 if i % 100 == 0 or i == len(pendientes):
                     print(f"  pasada {pasada} [{i}/{len(pendientes)}] ok={len(filas)} sin datos={len(fallidos)}", flush=True)
         if not fallidos or pasada == 3:
@@ -262,7 +261,7 @@ def actualizar_opciones():
     if len(filas) < 0.5 * len(lista):
         sys.exit(f"ERROR: solo {len(filas)} de {len(lista)} empresas con datos; se conserva el archivo anterior.")
     df = pd.DataFrame(filas).sort_values("Ticker")
-    for c in ("Put/Call OI", "Put/Call volumen"):
+    for c in ("P/C OI próx.", "P/C OI 30d", "P/C OI 60d", "P/C volumen 60d"):
         df[c] = df[c].round(3)
     df.to_csv(PUT_CALL, index=False, lineterminator="\n")
     if fallidos:

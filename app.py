@@ -329,13 +329,17 @@ def multiplos(ticker, precio):
     return out
 
 
+COLS_PUT_CALL = ["P/C OI próx.", "DTE próx.", "P/C OI 30d", "P/C OI 60d"]
+
+
 @st.cache_data(show_spinner=False)
 def cargar_put_call(_sello_key):
-    """Put/call OI de cada empresa (descarga diaria de Cboe, vencimientos a 60 días o menos)."""
+    """Put/call OI de cada empresa por plazo (descarga diaria de Cboe): {ticker: {columna: valor}}."""
     path = os.path.join(DATA_DIR, "put_call.csv")
     if not os.path.exists(path):
         return {}
-    return pd.read_csv(path).set_index("Ticker")["Put/Call OI"].to_dict()
+    df = pd.read_csv(path).set_index("Ticker").rename(columns={"Put/Call OI": "P/C OI 60d"})   # formato anterior
+    return df.reindex(columns=COLS_PUT_CALL).to_dict("index")
 
 
 @st.cache_data(show_spinner="Calculando resumen de todas las empresas...")
@@ -358,7 +362,7 @@ def resumen(_sello_key):
         for col, n in RETORNOS.items():
             fila[col] = (precio / close.iloc[-n - 1] - 1) * 100 if len(close) > n else None
         fila.update(multiplos(t, precio))
-        fila["Put/Call OI"] = pc.get(t)
+        fila.update({c: pc.get(t, {}).get(c) for c in COLS_PUT_CALL})
         filas.append(fila)
     return pd.DataFrame(filas).sort_values("Ticker").reset_index(drop=True)
 
@@ -537,9 +541,13 @@ COLUMNAS = {
     "Marg. neto %": st.column_config.NumberColumn(format="%.1f%%"),
     "P/E": st.column_config.NumberColumn(format="%.1fx"),
     "EV/EBITDA": st.column_config.NumberColumn(format="%.1fx"),
-    "Put/Call OI": st.column_config.NumberColumn(
-        format="%.2f", help="Contratos abiertos de puts ÷ calls, vencimientos a 60 días o menos (Cboe, una vez al día). "
-        "Sobre 1 = más puts que calls."),
+    "P/C OI próx.": st.column_config.NumberColumn(
+        format="%.2f", help="Put/Call OI del próximo vencimiento (contratos abiertos de puts ÷ calls). Sobre 1 = más puts que calls."),
+    "DTE próx.": st.column_config.NumberColumn(format="%d d", help="Días al próximo vencimiento."),
+    "P/C OI 30d": st.column_config.NumberColumn(
+        format="%.2f", help="Put/Call OI de todos los vencimientos a 30 días o menos."),
+    "P/C OI 60d": st.column_config.NumberColumn(
+        format="%.2f", help="Put/Call OI de todos los vencimientos a 60 días o menos."),
     # pestaña Señales
     "Fecha señal": st.column_config.DateColumn(format="DD-MM-YYYY"),
     "Compra": st.column_config.DateColumn(format="DD-MM-YYYY"),
@@ -1109,8 +1117,8 @@ if vista == "General":
 
     with tab_todas:
         mostrar_tabla(con_estado_sector(filtrado, tuple(sorted(sel_uni))), "tabla_general", 0)
-        st.caption("P/E con EPS diluido de los últimos 4 trimestres. **Put/Call OI** = contratos abiertos de puts ÷ calls "
-                   f"de los vencimientos a 60 días o menos (Cboe; actualizado {sello.get('opciones', '—') if sello else '—'}); "
+        st.caption("P/E con EPS diluido de los últimos 4 trimestres. **P/C OI** = contratos abiertos de puts ÷ calls "
+                   f"del próximo vencimiento (a **DTE** días), de los vencimientos a 30 días o menos y a 60 o menos (Cboe; actualizado {sello.get('opciones', '—') if sello else '—'}); "
                    "sobre 1 hay más puts que calls.")
 
     with tab_rsi:
@@ -1566,6 +1574,42 @@ elif vista == "Sectores":
             "está entrando más dinero que lo habitual · **Flujo** = **Entrando** si la Δ participación es positiva, **Saliendo** si es negativa; la **Racha** dice cuántos períodos seguidos lleva así · **Relativo 1m/3m** = cuánto le ganó (o perdió) al "
             "mercado en ese plazo. Una rotación se ve como sectores con **vs mercado** y **Δ participación** "
             "positivos (entra dinero y suben más que el resto) mientras otros pierden ambas cosas.")
+
+        st.subheader("Opciones: Put/Call OI promedio por sector")
+        pc_cols = ["P/C OI próx.", "P/C OI 30d", "P/C OI 60d"]
+        base_pc = data[data["Universo"].isin(sel_uni)]
+        g = base_pc.groupby("Sector")
+        tabla_pc = pd.concat([g["Ticker"].size().rename("Empresas"),
+                              g["P/C OI 60d"].count().rename("Con opciones"),
+                              g[pc_cols].mean(), g["P/C OI 60d"].median().rename("Mediana 60d")], axis=1)
+        tabla_pc = tabla_pc.sort_values("P/C OI 60d", ascending=False)
+        tabla_pc.loc["Todo el universo"] = [len(base_pc), base_pc["P/C OI 60d"].count(), *base_pc[pc_cols].mean(),
+                                            base_pc["P/C OI 60d"].median()]
+        prom_u = base_pc[pc_cols].mean()
+        tabla_pc = tabla_pc.rename_axis("Sector").reset_index()
+        # más puts que el promedio del universo = rojo; menos = verde (la fila del universo va en negrita, sin color)
+        estilo = pd.DataFrame("", index=tabla_pc.index, columns=tabla_pc.columns)
+        es_u = tabla_pc["Sector"] == "Todo el universo"
+        for c_ in pc_cols:
+            estilo.loc[~es_u & (tabla_pc[c_] > prom_u[c_]), c_] = "color: #ef5a6f"
+            estilo.loc[~es_u & (tabla_pc[c_] <= prom_u[c_]), c_] = "color: #3ecf8e"
+        estilo.loc[es_u, :] = "font-weight: 600; border-top: 1px solid #8a8984"
+        st.dataframe(
+            tabla_pc.style.apply(lambda _: estilo, axis=None),
+            hide_index=True, width="stretch", column_config={
+                "Empresas": st.column_config.NumberColumn(format="%d"),
+                "Con opciones": st.column_config.NumberColumn(format="%d", help="Empresas del sector con opciones listadas en Cboe."),
+                **{c: st.column_config.NumberColumn(c.replace("P/C OI", "Promedio P/C OI"), format="%.2f") for c in pc_cols},
+                "Mediana 60d": st.column_config.NumberColumn(
+                    "Mediana P/C OI 60d", format="%.2f",
+                    help="La empresa del medio del sector: no se mueve por una sola empresa con un ratio extremo.")})
+        st.caption(
+            "Promedio simple del **Put/Call OI** (contratos abiertos de puts ÷ calls) de las empresas de cada sector: del "
+            "**próximo vencimiento** de cada una, de sus vencimientos a **30 días** o menos y a **60** o menos. "
+            "En **rojo**, sectores con más puts que el promedio del universo; en **verde**, con menos. Es una foto del día "
+            f"(Cboe; actualizado {sello.get('opciones', '—') if sello else '—'}): no cambia con el período ni la frecuencia de arriba. "
+            "Una sola empresa con un ratio extremo puede mover mucho el promedio: si el promedio está muy sobre la "
+            "**mediana** (la empresa del medio del sector), es eso lo que está pasando.")
 
         st.subheader("Gráfico de rotación relativa (RRG)")
         # ejes fijos para todo el rango del selector de período: así se comparan los movimientos

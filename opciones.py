@@ -118,6 +118,19 @@ def put_call(df, dias=DIAS_PUT_CALL):
     return conteos(df[(df["exp"] >= hoy) & (df["exp"] <= hoy + datetime.timedelta(days=dias))])
 
 
+def put_call_plazos(df):
+    """Put/call OI del próximo vencimiento (y sus DTE), de los vencimientos a 30 días o menos y a 60 o menos."""
+    hoy = _hoy()
+    vivos = df[df["exp"] >= hoy]
+    if vivos.empty:
+        return None
+    prox = vivos["exp"].min()
+    p, t30, t60 = conteos(vivos[vivos["exp"] == prox]), put_call(df, 30), put_call(df, 60)
+    return {"DTE próx.": (prox - hoy).days, "P/C OI próx.": p["pc_oi"], "P/C OI 30d": t30["pc_oi"],
+            "P/C OI 60d": t60["pc_oi"], "OI put 60d": t60["oi_put"], "OI call 60d": t60["oi_call"],
+            "P/C volumen 60d": t60["pc_vol"]}
+
+
 def noticias(ticker, n=10):
     """Últimas noticias del ticker según la búsqueda de Yahoo Finance."""
     r = requests.get("https://query2.finance.yahoo.com/v1/finance/search",
